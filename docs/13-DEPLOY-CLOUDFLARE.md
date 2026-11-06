@@ -1,5 +1,8 @@
 # MenRut · Despliegue Cloudflare
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Node >=22 y Flutter 3.47.9. Ejecutar npm ci, npm run check, cd app && flutter pub get && flutter analyze && flutter test && flutter build web --no-web-resources-cdn. Después `python scripts/wrangler.py pages deploy app/build/web --project-name menrut --branch main`.

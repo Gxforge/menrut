@@ -1,0 +1,11 @@
+import {StrictMode,Suspense,lazy} from 'react';
+import {createRoot} from 'react-dom/client';
+import {Layout} from './components/Layout';
+import Home from './pages/Home';
+import './styles.css';
+const Account=lazy(()=>import('./pages/Account'));
+const Profile=lazy(()=>import('./pages/Profile'));
+const Information=lazy(()=>import('./pages/Information'));
+const path=window.location.pathname;
+createRoot(document.getElementById('root')!).render(<StrictMode><Layout><Suspense fallback={<div className="page wrap" role="status">Cargando esta sección…</div>}>{path==='/cuenta'?<Account/>:path.startsWith('/mensajero/')?<Profile slug={decodeURIComponent(path.split('/')[2])}/>:path==='/informacion'?<Information/>:<Home/>}</Suspense></Layout></StrictMode>);
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{/* Offline remains optional. */});});

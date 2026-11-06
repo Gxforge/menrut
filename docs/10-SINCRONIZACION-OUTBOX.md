@@ -1,5 +1,8 @@
 # MenRut · Outbox
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Edición de perfil y evento se guardan en un batch del shard. La proyección CORE usa UPSERT protegido por versión creciente. Si CORE falla, el evento permanece sin procesar. POST /courier/sync reproyecta el estado actual.

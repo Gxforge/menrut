@@ -1,20 +1,16 @@
 # MenRut · Conectamos caminos
 
+Directorio de mensajeros de Cuba. **Versión funcional parcial, no lista para lanzamiento comercial ni pagos.**
 
-> **Actualización Supabase:** se eliminaron los dos proyectos antiguos y se crearon `menrut-principal` y `menrut-secundario`, ambos ACTIVE_HEALTHY. Integración y renombre de organización pendientes. Ver [actualización detallada](docs/21-RECREACION-SUPABASE.md). Las referencias al estado anterior se conservan como registro de la primera entrega.
+- **Web:** https://menrut.pages.dev
+- **Repositorio privado:** https://github.com/Gxforge/menrut
+- **Estado actual:** [informe](INFORME-ESTADO.md) · [migración y conexión](docs/22-MIGRACION-REACT-Y-CONEXION.md)
 
-Plataforma de mensajeros de Cuba. **Entrega inicial parcial: no lista para operar pagos ni para lanzamiento comercial.**
-
-- Repositorio privado: https://github.com/Gxforge/menrut
-- Web desplegada: https://menrut.pages.dev
-- Despliegue inicial: https://35e6f4e4.menrut.pages.dev
-- Informe: [INFORME-ESTADO.md](INFORME-ESTADO.md)
-
-## Arquitectura
-Flutter Web / estructura Android, Pages Functions TypeScript, D1 CORE + dos shards reales. Supabase Auth/Storage pendiente de seleccionar proyecto activo. No React, R2 ni PostgreSQL operativo.
+## Tecnología actual
+React + TypeScript + Vite, autorizado por el propietario. Cloudflare Pages/Functions, D1 CORE + dos shards, Supabase principal para Auth/Storage. Sin servidor Node permanente, R2 ni PostgreSQL comercial. Flutter anterior conservado como respaldo en `app/`.
 
 ## Desarrollo
-Node 22+; Flutter estable 3.47.9; Python 3.
+Node 22+, Python 3. Solo URL y clave **publicable** en `web/.env.local`; ejemplo en `web/.env.example`.
 
 ```sh
 npm ci
@@ -22,35 +18,22 @@ npm run check
 npx wrangler d1 migrations apply D1_CORE --local
 npx wrangler d1 migrations apply D1_SHARD_01 --local
 npx wrangler d1 migrations apply D1_SHARD_02 --local
-cd app
-flutter pub get
-flutter analyze
-flutter test
-flutter build web --no-web-resources-cdn
-cd ..
-npx wrangler pages dev app/build/web --ip 0.0.0.0 --port 8788
-# En otra terminal:
-python tests/http_test.py
+npm run dev:api
+# En otra terminal, opcional con recarga en caliente:
+npm run dev
+# Contra Pages local:
+python3 tests/http_test.py
+npm run test:browser
 ```
 
-El desarrollo utiliza D1 local. **No añadir --remote para pruebas.** No hacer preview remoto hasta aislar bindings de producción.
+Build en `web/build`. Vite hace proxy relativo `/api` a Pages local. No usar `--remote` para pruebas ni ramas preview con bindings de producción. Esquema local y remoto deben tener las migraciones de `database/core` y `database/shard`.
 
-## Configuración
-`.env.example` contiene nombres sin valores. `.env` y `.dev.vars` son privados e ignorados por Git. Nunca utilizar tokens de gestión como claves públicas Flutter. Se recomienda rotarlos al terminar la configuración.
+## Funcionalidad comprobada
+Directorio sin perfiles ficticios, sesión Supabase, JWT firmado verificado por Pages, onboarding recuperable, edición de perfil, avatar público con RLS, carteras separadas y liquidación temporal con ledger. Páginas de perfil HTML sin JS obligatorio y metadatos propios. Pruebas de navegador móvil/escritorio y Auth real temporal.
 
-| Variable | Uso | Privada |
-|---|---|---|
-| GITHUB_TOKEN | Gestión/push repositorio | Sí |
-| CLOUDFLARE_API_TOKEN | Gestión D1/Pages | Sí |
-| CLOUDFLARE_ACCOUNT_ID | Gestión Cloudflare | No, pero no necesario en Flutter |
-| SUPABASE_ACCESS_TOKEN | Gestión del proyecto Supabase | Sí |
-| SUPABASE_URL | Emisor Auth y SDK Flutter | No |
-| SUPABASE_PUBLISHABLE_KEY | SDK Flutter, dart-define | No |
-| TRIAL_HMAC_SECRET | HMAC backend para señal de prueba | Sí |
-| ALLOWED_ORIGIN | CORS del backend | No |
-| API_BASE_URL | URL API para Android; vacío en web mismo origen | No |
+**Bloqueo para registro público por email:** falta SMTP personalizado. El predeterminado de Supabase solo permite correo al equipo autorizado. Confirmación conservada; no se simula entrega ni se declara registro público listo. Pagos, renovaciones, herramientas y administración completa siguen pendientes.
 
-## Código
-`app/lib` (UI), `functions/api/v1` (entrada Pages), `src/core` (seguridad), `src/modules` (dominio), `database/{core,shard}/migrations`, `tests`, `scripts`, `docs`.
+## Estructura
+`web/src` UI; `functions` Pages API y perfiles HTML; `src/core` seguridad; `src/modules` negocio; `database` migraciones; `supabase` políticas Storage; `tests` pruebas; `docs` documentación.
 
-La carpeta docs incluye 20 documentos con límites y pendientes reales. Los esquemas anticipan funcionalidades todavía no programadas; una tabla no equivale a un módulo terminado.
+`.env`, `.dev.vars`, claves de gestión, contraseñas y backups están fuera de Git. Nunca usar PAT, Cloudflare token, Supabase access token o service_role en variables VITE_. Ver diccionario de variables en el informe actual.

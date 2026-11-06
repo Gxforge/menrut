@@ -1,5 +1,8 @@
 # MenRut · Sharding
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Asignación permanente por UUID en `courier_shard_map`. Un INSERT SELECT ordena shards según el puntero persistente. Un trigger avanza el puntero en la misma transacción SQLite. Restricción PRIMARY KEY impide asignaciones duplicadas. No se acepta shard_id desde Flutter.

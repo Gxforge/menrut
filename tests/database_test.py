@@ -34,4 +34,16 @@ class DatabaseTests(unittest.TestCase):
   c.execute("INSERT INTO courier_profiles(user_id,slug) VALUES('a','a')")
   with self.assertRaises(sqlite3.IntegrityError):c.execute("INSERT INTO credit_wallets(user_id,tool_credits,settled_at,expires_at) VALUES('a',-1,0,0)")
   c.close()
+ def test_atomic_settlement_ledger_and_partial_seconds(self):
+  c=sqlite3.connect(':memory:')
+  for p in sorted((ROOT/'database/shard/migrations').glob('*.sql')):c.executescript(p.read_text())
+  c.execute("INSERT INTO courier_profiles(user_id,slug) VALUES('a','a')")
+  c.execute("INSERT INTO credit_wallets(user_id,permanence_seconds,tool_credits,settled_at,expires_at) VALUES('a',604800,50,0,604800)")
+  query=re.search(r'settleSQL=`(.*?)`;', (ROOT/'src/modules/credits.ts').read_text(),re.S)[1]
+  for now in [1,1,43200,43200]:c.execute(query,(now,now,'a'))
+  self.assertEqual(c.execute('SELECT permanence_seconds,tool_credits FROM credit_wallets').fetchone(),(561600,50))
+  self.assertEqual(c.execute('SELECT sum(delta),count(*) FROM credit_ledger').fetchone(),(-43200,2))
+  c.execute(query,(999999,999999,'a'))
+  self.assertEqual(c.execute('SELECT permanence_seconds,tool_credits FROM credit_wallets').fetchone(),(0,50))
+  c.close()
 if __name__=='__main__':unittest.main()

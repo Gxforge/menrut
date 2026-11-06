@@ -1,5 +1,8 @@
 # MenRut · Escalabilidad y cuotas
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 D1 Free: 10 bases, 500 MB/base, 5 GB agregados, Time Travel 7 días y 50 consultas por invocación Worker. Fuente consultada: https://developers.cloudflare.com/d1/platform/limits/ . No son 5 GB extra por base.

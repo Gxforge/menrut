@@ -1,5 +1,8 @@
 # MenRut · Backup y recuperación
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 `bash scripts/backup.sh` exporta tres bases remotas mediante Wrangler d1 export --remote --output y produce SHA256SUMS en backups/ (ignorado por Git, permisos restrictivos). Sintaxis contrastada con ayuda oficial del CLI instalado. No se ha ejecutado un backup ni ensayo de restauración.

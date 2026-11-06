@@ -1,5 +1,8 @@
 # MenRut · Diccionario de datos
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 La definición ejecutable está en `database/core/migrations` y `database/shard/migrations`.

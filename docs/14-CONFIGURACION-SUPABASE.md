@@ -1,5 +1,8 @@
 # MenRut · Supabase pendiente
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 El token de gestión se verificó por API, no es la clave pública de Flutter. Dos proyectos INACTIVE: nexolink-core-app y nexolink-core-db. No se renombraron, reactivaron ni modificaron datos existentes.

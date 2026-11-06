@@ -1,5 +1,8 @@
 # MenRut · Operaciones
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Comprobar GET /api/v1/health; GET /directory debe responder sin fanout. Si no aparecen perfiles: revisar visible, expires_at, estado de cuenta y evento de shard; ejecutar courier/sync con sesión propietaria. Si asignación devuelve capacidad, revisar enabled, medida <24h y ocupación <95 %. Actualizar medidas con script seguro.

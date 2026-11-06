@@ -6,6 +6,7 @@ import {directory,publicProfile} from './modules/directory';
 import {wallets} from './modules/credits';
 import {updateProfile} from './modules/profile';
 import {syncDirectory} from './modules/sync';
+import {updatePhoto} from './modules/photo';
 export async function route(request:Request,env:Env):Promise<unknown> {
  const url=new URL(request.url), path=url.pathname.replace('/api/v1',''),method=request.method;
  if(method==='GET'&&path==='/health') return {service:'MenRut',status:'ok',scope:'foundation'};
@@ -27,6 +28,7 @@ export async function route(request:Request,env:Env):Promise<unknown> {
  }
  const db=await ownShard(env,uid);
  if(method==='GET'&&path==='/courier/profile') return db.prepare('SELECT * FROM courier_profiles WHERE user_id=?').bind(uid).first();
+ if(method==='PUT'&&path==='/courier/photo') return updatePhoto(env,db,uid,await request.json());
  if(method==='PUT'&&path==='/courier/profile') return updateProfile(env,db,uid,await request.json());
  if(method==='GET'&&path==='/credits/wallets') return wallets(db,uid);
  if(method==='GET'&&path==='/credits/ledger') return (await db.prepare('SELECT * FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(uid).all()).results;

@@ -1,59 +1,42 @@
-# MenRut — Informe de entrega inicial
+# MenRut — Estado actual
 
-
-> **Actualización Supabase:** se eliminaron los dos proyectos antiguos y se crearon `menrut-principal` y `menrut-secundario`, ambos ACTIVE_HEALTHY. Integración y renombre de organización pendientes. Ver [actualización detallada](docs/21-RECREACION-SUPABASE.md). Las referencias al estado anterior se conservan como registro de la primera entrega.
-
-6 de noviembre de 2026. **El encargo completo no está terminado.**
+6 de noviembre de 2026. **Entrega parcial: no equivale al cumplimiento completo del encargo.**
 
 ## Implementado y probado
-- Repositorio privado `Gxforge/menrut` creado por API.
-- D1 reales: `menrut-core`, `menrut-shard-01`, `menrut-shard-02`.
-- Dos migraciones CORE y una migración por shard, aplicadas local y remotamente.
-- Flutter Web compilado con SDK estable 3.47.9, Dart 3.13.7.
-- Web y Pages Functions desplegadas: https://menrut.pages.dev . Respuestas HTTP comprobadas: inicio 200; health/directorio/planes 200; cuenta privada sin sesión 401.
-- TypeScript tipado. Pruebas: 7 unitarias TS + 3 SQLite + 8 HTTP locales + 1 widget Flutter. Análisis Flutter sin incidencias.
-- Round robin persistente con trigger; prueba local 100 usuarios/200 solicitudes concurrentes, sin duplicar asignaciones.
-- Fórmula exacta de permanencia; cartera de herramientas separada; restricciones de no negatividad.
-- Control de archivos fuente <=300 líneas; `npm audit` sin vulnerabilidades conocidas tras actualización.
-- Marca MenRut e iconos entregados incorporados; sin mensajeros ficticios.
+- Migración autorizada a React + TypeScript + Vite. Flutter conservado sin borrar; ya no es frontend de despliegue.
+- Web: https://menrut.pages.dev . Despliegue de esta entrega: https://f4bf3fb4.menrut.pages.dev .
+- Backend Pages Functions, D1 CORE y shards 01–02 reales. Directorio central sin fanout, asignador persistente, perfil y outbox versionado.
+- Supabase `menrut-principal` conectado. JWT real firmado ES256 comprobado en backend local y lectura `/me` de Pages remoto. Secundario reservado.
+- Políticas Storage aplicadas: avatar público consentido y limitado al propietario; comprobantes/documentos privados sin subida cliente habilitada.
+- Editor de perfil, avatar optimizado, control de teléfono público, dashboard básico, carteras y movimientos. Liquidación temporal con ledger SQL transaccional en ambos shards.
+- Perfiles HTML con escape de contenido, canonical/Open Graph, sin JS obligatorio. Falta perfil real público para una comprobación SEO positiva en producción; el estado 404 fue verificado.
+- Typecheck, build React y control 300 líneas pasan. `npm audit`: cero vulnerabilidades conocidas.
+- Pruebas: 17 TS + 4 SQLite + 8 HTTP locales + 8 navegador (móvil/escritorio). Las 8 de navegador también pasaron contra el despliegue público. Integración adicional con cuenta y avatar técnicos temporales eliminados.
 
-## Implementado, sin validación completa en entorno real
-- Verificador JWT Supabase JWKS con ES256/RS256, issuer/audience/exp/sub.
-- Onboarding recuperable y prueba con señal de teléfono/HMAC.
-- Edición de perfil con outbox y proyección versionada, reintento explícito.
-- Permisos administrativos D1 y endpoints limitados de lectura.
-- Manifest PWA, iconos, service worker y pantalla offline; instalación en dispositivo no comprobada.
+## Conectado, con bloqueo externo
+Los formularios llaman a Supabase Auth, pero **el registro y recuperación para el público necesitan un SMTP propio**. El envío predeterminado se limita a miembros autorizados del equipo. No se desactivó la confirmación de correo. No se ha probado recepción real de email ni todo el ciclo de recuperación de una persona externa.
 
-## Preparado pero sin conectar
-- Supabase Flutter y configuración pública mediante dart-define.
-- Dos proyectos Supabase existentes están INACTIVE. Ninguno fue reactivado, renombrado ni modificado.
-- Credenciales locales protegidas en `.env`, excluidas de Git. No se usan en Flutter.
-- Estructura Android generada; no compilada. Falta JDK/SDK compatible para verificarla.
-- Script de backup y procedimiento de restauración: no ejecutados ni ensayados.
+## Pendiente
+Pagos y acreditación idempotente, renovación acumulativa/cambio de plan, herramientas/reservas, servicios/rutas completos, geografía oficial, OTP/opiniones, moderación, panel administrativo completo, privacidad/borrado, reconciliación outbox general, aislamiento preview, backups/restauración ensayados y PWA instalada físicamente. No se admiten pagos reales. No se publican precios borrador ni perfiles ficticios.
 
-## Pendiente / no disponible para uso comercial
-- Seleccionar proyecto Supabase, reactivarlo, configurar Auth, retornos y políticas Storage.
-- Renombrar organización y proyecto elegido con autorización de alcance precisa.
-- Catálogo geográfico verificado con fuente oficial. No se sembraron localidades inventadas.
-- Pagos manuales, comprobantes privados, aprobación/acreditación idempotente, renovaciones y cambio de plan.
-- Ledger por liquidación temporal, herramientas/reservas/devoluciones y límites de uso.
-- Entregas OTP, opiniones verificadas, reputación, moderación y notificaciones.
-- Panel administrativo completo y dashboards completos de clientes, negocios y mensajeros.
-- Dispatcher outbox general, fallos/reintentos automáticos, reconciliación y eventos CORE→shard.
-- API completa del encargo, privacidad/borrado, auditoría transversal y alternativa administrada de prueba.
-- Aislamiento de preview remoto, alertas de cuotas, bloqueo de escrituras al 100 %, migración administrativa de mensajeros.
-- SEO indexable individual y metadatos por perfil.
-- Pruebas completas de seguridad, experiencia móvil, PWA y restauración.
+Nombre visible de organización todavía pendiente de cambio desde el panel Supabase. No existe endpoint público documentado de renombre. No se ha activado facturación ni contratado servicios de pago.
 
-## Recursos y cuotas
-Solo existen CORE y shards 01–02. Cloudflare permite preparar 03–09 por bindings; todavía no se crearon. D1 Free: diez bases, 500 MB/base, 5 GB agregados, 50 consultas/invocación, siete días Time Travel. No se activó ningún servicio de pago ni se compró dominio. Revisar cuotas de Auth/Storage/egress Supabase y pausa antes de lanzamiento; no se garantiza continuidad gratuita.
+## Rendimiento observado
+JS inicial ~74,30 kB gzip y CSS ~4,51 kB gzip; cuenta/Auth en chunk adicional ~57,72 kB gzip. Presupuesto automático: 95 KiB JS inicial y 10 KiB CSS gzip. No son tiempos medidos en Cuba. Dos chunks generan advertencia Vite por tamaño sin comprimir; quedan oportunidades de optimización.
 
-## Continuación y despliegue
-1. Elegir uno de los dos proyectos Supabase existentes, sin alterar el otro.
-2. Activar Auth asimétrico y políticas privadas de Storage; guardar secretos en Pages, no en Git.
-3. Configurar URL/clave pública, compilar Flutter y desplegar con `python scripts/wrangler.py pages deploy app/build/web --project-name menrut --branch main`.
-4. Completar primero ledger/renovación/pagos y sus pruebas de concurrencia; después herramientas, entregas, opiniones y administración.
-5. Crear cada shard futuro con CLI oficial, aplicar el mismo esquema, añadir binding y medirlo antes de habilitar asignaciones.
-6. Ejecutar backups y un ensayo real de recuperación antes de admitir datos comerciales.
+## Variables
+| Variable | Destino | Privada |
+|---|---|---|
+| VITE_SUPABASE_URL | Frontend web | No |
+| VITE_SUPABASE_PUBLISHABLE_KEY | Frontend/CI | No |
+| SUPABASE_URL | Pages, emisor JWT | No |
+| ALLOWED_ORIGIN | CORS Pages | No |
+| TRIAL_HMAC_SECRET | Secret Pages/backend | Sí |
+| SUPABASE_ACCESS_TOKEN | Scripts de gestión | Sí |
+| CLOUDFLARE_API_TOKEN | Scripts de gestión | Sí |
+| GITHUB_TOKEN | Gestión/push | Sí |
+| MENRUT_*_DB_PASSWORD | Gestión privada de los proyectos | Sí |
 
-Documentación detallada en `docs/01` a `docs/20` y guía local en README. La configuración de CI de calidad está preparada; no se afirma que su ejecución remota haya terminado.
+Nada privado debe llevar prefijo VITE_. SMTP requiere credenciales privadas propias, todavía no suministradas/configuradas.
+
+Guía y pruebas reproducibles: [docs/22-MIGRACION-REACT-Y-CONEXION.md](docs/22-MIGRACION-REACT-Y-CONEXION.md). Documentos 01–21 conservan contexto histórico; este informe y el documento 22 describen el estado actual.

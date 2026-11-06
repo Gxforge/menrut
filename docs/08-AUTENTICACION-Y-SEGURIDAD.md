@@ -1,5 +1,8 @@
 # MenRut · Autenticación y seguridad
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Verificador jose: ES256/RS256, firma JWKS, issuer, audience authenticated, sub, exp e iat. Cache JWKS 10 minutos. HS256 se rechaza: activar firma asimétrica en Supabase antes de integrar. Falta prueba end-to-end con JWT real.

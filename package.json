@@ -3,25 +3,35 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p web/tsconfig.json",
     "test": "tsx --test tests/*.test.ts && python3 tests/database_test.py",
     "quality": "python3 scripts/quality.py",
-    "check": "npm run typecheck && npm test && npm run quality",
-    "dev": "wrangler pages dev app/build/web",
-    "build": "cd app && flutter build web --pwa-strategy=none"
+    "check": "npm run typecheck && npm test && npm run quality && npm run build && python3 scripts/web_budget.py",
+    "dev": "vite --config web/vite.config.ts",
+    "build": "vite build --config web/vite.config.ts",
+    "dev:api": "wrangler pages dev web/build --ip 0.0.0.0 --port 8788",
+    "test:browser": "playwright test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "jose": "^6.2.15",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261106.1",
+    "@playwright/test": "^1.65.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
+    "vite": "^8.3.6",
     "wrangler": "^4.158.0"
   },
   "private": true,

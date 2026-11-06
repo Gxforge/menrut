@@ -1,5 +1,8 @@
 # MenRut · Pagos
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Solo existen esquema y planes borrador. No existe flujo de compra ni aprobación. Los precios no aparecen en el endpoint público porque active=0. Los valores de plan son propuestas sin activación administrativa.

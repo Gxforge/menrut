@@ -1,5 +1,8 @@
 # MenRut · Visión y alcance
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 MenRut conecta clientes, negocios y mensajeros de Cuba. Contacto directo, moneda CUP. Esta entrega es una base funcional parcial, no el producto nacional terminado.

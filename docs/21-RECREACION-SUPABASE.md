@@ -1,5 +1,8 @@
 # Recreación de Supabase — 6 de noviembre de 2026
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Esta actualización sustituye el estado anterior de Supabase descrito en el informe inicial.
 
 ## Autorización y acciones ejecutadas

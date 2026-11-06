@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!web/.env.example
 .dev.vars
 .access.json
 .infrastructure.json
@@ -16,3 +17,7 @@ backups/
 .idea/
 .supabase-*.json
 scripts/rebuild_supabase.py
+
+web/.env.local
+playwright-report/
+test-results/

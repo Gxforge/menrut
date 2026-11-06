@@ -1,6 +1,6 @@
 {
   "name": "menrut",
-  "pages_build_output_dir": "app/build/web",
+  "pages_build_output_dir": "web/build",
   "compatibility_date": "2026-05-01",
   "d1_databases": [
     {
@@ -23,7 +23,7 @@
     }
   ],
   "vars": {
-    "SUPABASE_URL": "",
+    "SUPABASE_URL": "https://orqskfecwtroppqimhnj.supabase.co",
     "ALLOWED_ORIGIN": "https://menrut.pages.dev"
   }
 }

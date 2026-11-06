@@ -3,15 +3,17 @@ import {ApiError,type Env} from '../../../src/core/env';
 export const onRequest:PagesFunction<Env>=async ({request,env})=>{
  let apiRequest:Request=request;
  const requestId=crypto.randomUUID(),origin=request.headers.get('Origin');
+ const sameOrigin=origin===new URL(request.url).origin;
+ const originAllowed=!!origin&&(sameOrigin||origin===env.ALLOWED_ORIGIN);
  const headers:Record<string,string>={'Content-Type':'application/json; charset=utf-8',
  'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Request-Id':requestId,'Vary':'Origin'};
- if(origin && origin===env.ALLOWED_ORIGIN) {
-  headers['Access-Control-Allow-Origin']=origin;
+ if(originAllowed) {
+  headers['Access-Control-Allow-Origin']=origin!;
   headers['Access-Control-Allow-Headers']='Authorization, Content-Type, Idempotency-Key';
   headers['Access-Control-Allow-Methods']='GET, POST, PUT, DELETE, OPTIONS';
  }
  try {
-  if(origin && origin!==env.ALLOWED_ORIGIN) throw new ApiError('FORBIDDEN',403);
+  if(origin && !originAllowed) throw new ApiError('FORBIDDEN',403);
   if(request.method==='OPTIONS') return new Response(null,{status:204,headers});
   if(!['GET','HEAD'].includes(request.method)) {
    if(!request.headers.get('Content-Type')?.startsWith('application/json')) throw new ApiError('VALIDATION_ERROR',415);

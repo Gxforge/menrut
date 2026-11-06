@@ -1,5 +1,8 @@
 # MenRut · API disponible
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Base `/api/v1`. Respuesta `{data,request_id}` o `{error:{code},request_id}`.

@@ -1,5 +1,8 @@
 # MenRut · Arquitectura implementada
 
+> Documento histórico de una entrega anterior. Para el frontend y conexión actuales, consultar [actualización React/Supabase](22-MIGRACION-REACT-Y-CONEXION.md).
+
+
 Estado: entrega inicial parcial — 6 de noviembre de 2026.
 
 Flutter Web → Pages Functions TypeScript → D1 CORE y dos shards. Auth se ha programado con Supabase JWKS, pero no se ha conectado a un proyecto activo. No hay datos operativos en PostgreSQL ni R2.
