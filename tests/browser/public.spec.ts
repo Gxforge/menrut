@@ -25,3 +25,14 @@ test('Sin red nunca confirma operaciones',async({page,context})=>{
  await context.setOffline(true);await expect(page.getByRole('status').filter({hasText:'Sin conexión.'})).toBeVisible();
  await context.setOffline(false);
 });
+
+test('Usa el logotipo original, no letras que lo imitan',async({page})=>{
+ await page.goto('/');
+ const logo=page.locator('header a.brand img');
+ await expect(logo).toHaveAttribute('src','/brand/menrut-logo.webp');
+ await expect(logo).toHaveAttribute('alt','MenRut');
+ await expect(logo).toBeVisible();
+ await expect(page.locator('header .brand-symbol')).toHaveCount(0);
+ expect(await logo.evaluate((img:HTMLImageElement)=>img.complete&&img.naturalWidth>0)).toBe(true);
+ await expect(page.locator('footer a.brand img')).toHaveAttribute('src','/brand/menrut-logo.webp');
+});
