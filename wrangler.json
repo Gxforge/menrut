@@ -1,0 +1,29 @@
+{
+  "name": "menrut",
+  "pages_build_output_dir": "app/build/web",
+  "compatibility_date": "2026-05-01",
+  "d1_databases": [
+    {
+      "binding": "D1_CORE",
+      "database_name": "menrut-core",
+      "database_id": "3383e764-c3a3-40d9-aa71-38f07cfb205a",
+      "migrations_dir": "database/core/migrations"
+    },
+    {
+      "binding": "D1_SHARD_01",
+      "database_name": "menrut-shard-01",
+      "database_id": "abd5f4a5-36ae-499b-bad0-96a41250bb0f",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_02",
+      "database_name": "menrut-shard-02",
+      "database_id": "4fc1bf6d-86a2-4b9e-b15f-70c4c45c85f6",
+      "migrations_dir": "database/shard/migrations"
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "",
+    "ALLOWED_ORIGIN": "https://menrut.pages.dev"
+  }
+}

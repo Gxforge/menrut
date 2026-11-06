@@ -1,0 +1,29 @@
+{
+  "name": "menrut",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "typecheck": "tsc",
+    "test": "tsx --test tests/*.test.ts && python3 tests/database_test.py",
+    "quality": "python3 scripts/quality.py",
+    "check": "npm run typecheck && npm test && npm run quality",
+    "dev": "wrangler pages dev app/build/web",
+    "build": "cd app && flutter build web --pwa-strategy=none"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "jose": "^6.2.15",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261106.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.158.0"
+  },
+  "private": true,
+  "type": "module"
+}
