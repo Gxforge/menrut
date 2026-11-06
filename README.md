@@ -1,5 +1,8 @@
 # MenRut · Conectamos caminos
 
+
+> **Actualización Supabase:** se eliminaron los dos proyectos antiguos y se crearon `menrut-principal` y `menrut-secundario`, ambos ACTIVE_HEALTHY. Integración y renombre de organización pendientes. Ver [actualización detallada](docs/21-RECREACION-SUPABASE.md). Las referencias al estado anterior se conservan como registro de la primera entrega.
+
 Plataforma de mensajeros de Cuba. **Entrega inicial parcial: no lista para operar pagos ni para lanzamiento comercial.**
 
 - Repositorio privado: https://github.com/Gxforge/menrut

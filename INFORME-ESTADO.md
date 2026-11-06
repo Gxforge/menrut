@@ -1,5 +1,8 @@
 # MenRut — Informe de entrega inicial
 
+
+> **Actualización Supabase:** se eliminaron los dos proyectos antiguos y se crearon `menrut-principal` y `menrut-secundario`, ambos ACTIVE_HEALTHY. Integración y renombre de organización pendientes. Ver [actualización detallada](docs/21-RECREACION-SUPABASE.md). Las referencias al estado anterior se conservan como registro de la primera entrega.
+
 6 de noviembre de 2026. **El encargo completo no está terminado.**
 
 ## Implementado y probado
