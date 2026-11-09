@@ -80,13 +80,16 @@ export default function ResultsScreen() {
     [provinces, search.destinationId]
   )
 
-  const routeLabel = originName && destinationName
-    ? `${originName} → ${destinationName}`
-    : originName
-      ? `Desde ${originName}`
-      : destinationName
-        ? `Hacia ${destinationName}`
-        : 'Todos los mensajeros'
+  const routeLabel =
+    search.coverageType === 'zone' && originName
+      ? `Mensajeros de zona · ${originName}`
+      : originName && destinationName
+        ? `${originName} → ${destinationName}`
+        : originName
+          ? `Desde ${originName}`
+          : destinationName
+            ? `Hacia ${destinationName}`
+            : 'Todos los mensajeros'
 
   const results = resultsQuery.data?.results ?? []
   const alternatives = resultsQuery.data?.alternatives ?? []
