@@ -20,6 +20,48 @@
       "database_name": "menrut-shard-02",
       "database_id": "4fc1bf6d-86a2-4b9e-b15f-70c4c45c85f6",
       "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_03",
+      "database_name": "menrut-shard-03",
+      "database_id": "c4ce188c-1ac0-40e7-ae91-ae69f8c6437d",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_04",
+      "database_name": "menrut-shard-04",
+      "database_id": "c5b9aa7c-2ed6-476e-bdfa-5c7306e2a807",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_05",
+      "database_name": "menrut-shard-05",
+      "database_id": "b13a697f-4980-4f12-bfb4-b374c22942a6",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_06",
+      "database_name": "menrut-shard-06",
+      "database_id": "bb49fb8e-70f3-4e23-9767-0e41d4df8dad",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_07",
+      "database_name": "menrut-shard-07",
+      "database_id": "a4e6b404-87f3-4bdf-b014-232f99d12016",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_08",
+      "database_name": "menrut-shard-08",
+      "database_id": "ce550417-56e4-476b-9bb3-2c6ab3d9cff4",
+      "migrations_dir": "database/shard/migrations"
+    },
+    {
+      "binding": "D1_SHARD_09",
+      "database_name": "menrut-shard-09",
+      "database_id": "c14b9577-5767-4e68-a5b0-365c82a4e1c6",
+      "migrations_dir": "database/shard/migrations"
     }
   ],
   "vars": {
