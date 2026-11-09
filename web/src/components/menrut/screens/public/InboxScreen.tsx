@@ -63,7 +63,15 @@ export default function InboxScreen() {
       />
 
       <div className="px-4 pt-4">
-        {conversations.isLoading ? (
+        {!session ? (
+          <EmptyState
+            icon={<MessageSquare className="h-8 w-8" aria-hidden />}
+            title="Inicia sesión para ver tus mensajes"
+            hint="Coordina directamente con los mensajeros desde conversaciones privadas. La búsqueda sigue siendo libre, sin cuenta."
+            actionLabel="Iniciar sesión"
+            onAction={() => navigate('login')}
+          />
+        ) : conversations.isLoading ? (
           <div className="space-y-3" aria-busy="true" aria-label="Cargando conversaciones">
             <ConversationSkeleton />
             <ConversationSkeleton />

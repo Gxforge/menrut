@@ -27,7 +27,7 @@ import { EmptyState, RouteSkeleton } from '@/components/menrut/core/EmptyState'
 import { useToggleFavorite } from '@/components/menrut/hooks'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
-import { formatCup, formatDateTime, formatRating, initials, SERVICE_LABELS, timeAgo } from '@/lib/format'
+import { formatCup, formatRating, initials, SERVICE_LABELS, timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { PassportDto } from '@/lib/types'
 
@@ -160,7 +160,7 @@ export default function PassportScreen() {
       <TopBar title="Pasaporte profesional" subtitle={p.fullName} onBack={handleBack} />
 
       {/* ── Cabecera tipo pasaporte ─────────────────────────────────────────── */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-navy via-[#0d3375] to-deep px-4 pb-12">
+      <header className="relative overflow-hidden bg-gradient-to-b from-navy via-[#0d3375] to-deep px-4 pb-9">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(0,194,255,0.22)_0%,rgba(11,43,96,0)_55%)]"
@@ -208,9 +208,9 @@ export default function PassportScreen() {
         </div>
       </header>
 
-      <main className="flex-1 space-y-6 px-4 pb-6">
+      <main className="flex-1 space-y-6 px-4 pb-6 pt-5">
         {/* ── Grid de datos (verificado vs declarado) ───────────────────────── */}
-        <section aria-label="Datos del mensajero" className="-mt-3">
+        <section aria-label="Datos del mensajero">
           <div className="grid grid-cols-2 gap-3">
             <DataCard
               icon={<Star className="h-4 w-4" aria-hidden />}
@@ -317,15 +317,7 @@ export default function PassportScreen() {
           {p.routes.length > 0 ? (
             <div className="space-y-3">
               {p.routes.map((route) => (
-                <div key={route.id} className="relative">
-                  {route.nextDepartureAt && (
-                    <span className="absolute -top-2 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-orange px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                      <CalendarClock className="h-3 w-3" aria-hidden />
-                      Próxima salida: {formatDateTime(route.nextDepartureAt)}
-                    </span>
-                  )}
-                  <RouteCard route={route} />
-                </div>
+                <RouteCard key={route.id} route={route} />
               ))}
             </div>
           ) : (
@@ -526,12 +518,12 @@ function SaveButton({ courierId, initial }: { courierId: string; initial: boolea
 function PassportSkeleton() {
   return (
     <div aria-busy="true" aria-label="Cargando pasaporte">
-      <div className="flex flex-col items-center bg-gradient-to-b from-navy to-deep px-4 pb-12 pt-6">
+      <div className="flex flex-col items-center bg-gradient-to-b from-navy to-deep px-4 pb-9 pt-6">
         <Skeleton className="h-24 w-24 rounded-full border-[5px] border-white/10" />
         <Skeleton className="mt-4 h-6 w-44" />
         <Skeleton className="mt-3 h-4 w-32" />
       </div>
-      <div className="-mt-3 space-y-3 px-4 pb-8">
+      <div className="space-y-3 px-4 pb-8 pt-5">
         <div className="grid grid-cols-2 gap-3">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="rounded-2xl border border-line bg-card p-3.5">

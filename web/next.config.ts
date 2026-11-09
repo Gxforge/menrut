@@ -7,6 +7,9 @@ const isStaticExport = process.env.EXPORT_STATIC === "1";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // El indicador flotante de Dev Tools se posicionaba ENCIMA de la barra de
+  // navegación inferior y tapaba los botones (Inicio, Rutas…). Fuera.
+  devIndicators: false,
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,

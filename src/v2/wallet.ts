@@ -99,13 +99,13 @@ export async function activateTrialPlan(
   const stmts: D1PreparedStatement[] = [
     db
       .prepare(
-        "INSERT INTO Membership(id,courierId,planId,startedAt,expiresAt,status,createdAt) VALUES(?,?,?,?,'active',?)"
+        "INSERT INTO Membership(id,courierId,planId,startedAt,expiresAt,status,createdAt) VALUES(?,?,?,?,?,'active',?)"
       )
       .bind(newId(), courierProfileId, plan.id, now, expiresAt, now),
     db.prepare('UPDATE User SET hasUsedTrial=1, updatedAt=? WHERE id=?').bind(now, userId),
     db
       .prepare(
-        "INSERT INTO Notification(id,userId,category,title,body,readAt,createdAt) VALUES(?,?,?,'Bienvenido a MENRUT',?,?,NULL,?)"
+        "INSERT INTO Notification(id,userId,category,title,body,readAt,createdAt) VALUES(?,?,?,'Bienvenido a MENRUT',?,NULL,?)"
       )
       .bind(
         newId(), userId, 'membresia',

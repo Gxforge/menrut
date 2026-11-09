@@ -9,12 +9,18 @@ export function getChatSocket(): Socket {
   // (`if (socket?.connected) return socket`) generaba una conexión nueva en
   // cada llamada mientras aún conectaba, dejando sockets huérfanos.
   if (!socket) {
+    // En producción (Cloudflare Pages) no existe el mini-servicio de sockets:
+    // el chat funciona por HTTP con sondeo. Solo el sandbox lo sirve (3004).
+    const isLocal =
+      typeof window !== 'undefined' &&
+      /^(localhost|127\.0\.0\.1|.*\.space-z\.ai)$/.test(window.location.hostname)
     socket = io('/?XTransformPort=3004', {
       transports: ['websocket', 'polling'],
       forceNew: true,
-      reconnection: true,
+      reconnection: isLocal,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      autoConnect: isLocal,
     })
   }
   return socket

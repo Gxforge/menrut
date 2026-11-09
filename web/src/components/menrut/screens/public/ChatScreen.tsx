@@ -140,11 +140,15 @@ export default function ChatScreen() {
   const taRef = useRef<HTMLTextAreaElement>(null)
   const didScrollRef = useRef(false)
 
-  // Historial de la conversación (HTTP)
+  // Historial de la conversación (HTTP). En producción no hay servicio de
+  // sockets: cuando la sala en vivo no está activa se sondea cada 8 s para
+  // recibir mensajes nuevos del otro participante.
   const history = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: () => api.messages(conversationId as string),
     enabled: !!conversationId,
+    refetchInterval: roomJoined ? false : 8000,
+    refetchIntervalInBackground: false,
   })
 
   // Datos del otro (rol) para el subtítulo de la barra

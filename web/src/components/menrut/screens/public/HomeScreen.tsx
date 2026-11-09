@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  ArrowUpDown, Bell, Bike, CalendarClock, Heart, Map, RotateCcw, Search,
+  ArrowUpDown, Bell, Bike, Heart, Map, MapPin, RotateCcw, Search,
   Users, Route as RouteIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,10 @@ export default function HomeScreen() {
   const setSearch = useAppStore((s) => s.setSearch)
   const search = useAppStore((s) => s.search)
 
-  // Catálogo territorial (caché largo: catálogo estable)
+  // ¿Qué busca el cliente? mensajeros de zona (trabajan dentro de su
+  // municipio) o mensajeros que viajan a otros municipios/provincias.
+  const mode: 'zone' | 'travel' = search.coverageType === 'zone' ? 'zone' : 'travel'
+  const setMode = (m: 'zone' | 'travel') => setSearch({ coverageType: m === 'zone' ? 'zone' : 'any' })
   const territoriesQuery = useQuery({
     queryKey: ['territories'],
     queryFn: () => api.territories(),
@@ -58,11 +61,14 @@ export default function HomeScreen() {
     retry: 1,
   })
 
-  const ready = !!search.originId && !!search.destinationId
+  const ready = mode === 'zone' ? !!search.originId : !!search.originId && !!search.destinationId
 
   function handleSearch() {
     if (!ready) return
-    setSearch({ originId: search.originId, destinationId: search.destinationId })
+    if (mode === 'zone') {
+      // Mensajeros de zona: búsqueda local por el municipio del cliente.
+      setSearch({ destinationId: null })
+    }
     navigate('results')
   }
 
@@ -140,36 +146,82 @@ export default function HomeScreen() {
         {/* ── Buscador protagonista ────────────────────────────────────────── */}
         <section aria-label="Buscar mensajeros por ruta" className="-mt-10">
           <div className="rounded-3xl border border-line bg-card p-4 shadow-[0_18px_50px_rgba(20,67,130,0.13)]">
+            {/* ¿Qué tipo de mensajero buscas? (decisión del propietario: el
+                cliente elige directamente entre mensajeros de zona y los que
+                viajan a otros municipios/provincias) */}
+            <div className="mb-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                ¿Qué tipo de mensajero buscas?
+              </p>
+              <div role="radiogroup" aria-label="Tipo de mensajero" className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === 'zone'}
+                  onClick={() => setMode('zone')}
+                  className={cn(
+                    'flex h-11 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-semibold transition-all active:scale-[0.97]',
+                    mode === 'zone' ? 'bg-card text-blue shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <MapPin className="h-4 w-4" aria-hidden />
+                  De mi zona
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === 'travel'}
+                  onClick={() => setMode('travel')}
+                  className={cn(
+                    'flex h-11 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-semibold transition-all active:scale-[0.97]',
+                    mode === 'travel' ? 'bg-card text-blue shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <RouteIcon className="h-4 w-4" aria-hidden />
+                  Viaja a otros lugares
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                {mode === 'zone'
+                  ? 'Mensajeros que trabajan dentro de tu municipio, con entregas el mismo día.'
+                  : 'Mensajeros que cubren rutas entre municipios o provincias.'}
+              </p>
+            </div>
+
             <div className="relative space-y-1">
               <TerritoryPicker
-                label="Desde"
-                placeholder="Municipio de origen"
+                label={mode === 'zone' ? 'Tu municipio' : 'Desde'}
+                placeholder={mode === 'zone' ? 'Municipio donde estás' : 'Municipio de origen'}
                 value={search.originId}
                 provinces={provinces}
                 loading={territoriesQuery.isLoading}
                 tone="blue"
                 onSelect={(id) => setSearch({ originId: id })}
               />
-              <TerritoryPicker
-                label="Hacia"
-                placeholder="Municipio de destino"
-                value={search.destinationId}
-                provinces={provinces}
-                loading={territoriesQuery.isLoading}
-                tone="orange"
-                onSelect={(id) => setSearch({ destinationId: id })}
-              />
+              {mode === 'travel' && (
+                <>
+                  <TerritoryPicker
+                    label="Hacia"
+                    placeholder="Municipio de destino"
+                    value={search.destinationId}
+                    provinces={provinces}
+                    loading={territoriesQuery.isLoading}
+                    tone="orange"
+                    onSelect={(id) => setSearch({ destinationId: id })}
+                  />
 
-              {/* Intercambio origen ↔ destino */}
-              <button
-                type="button"
-                onClick={() => setSearch({ originId: search.destinationId, destinationId: search.originId })}
-                disabled={!search.originId && !search.destinationId}
-                aria-label="Intercambiar origen y destino"
-                className="absolute right-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-secondary text-navy shadow-sm transition-all hover:border-blue/40 active:scale-90 disabled:opacity-40"
-              >
-                <ArrowUpDown className="h-4 w-4" aria-hidden />
-              </button>
+                  {/* Intercambio origen ↔ destino */}
+                  <button
+                    type="button"
+                    onClick={() => setSearch({ originId: search.destinationId, destinationId: search.originId })}
+                    disabled={!search.originId && !search.destinationId}
+                    aria-label="Intercambiar origen y destino"
+                    className="absolute right-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-secondary text-navy shadow-sm transition-all hover:border-blue/40 active:scale-90 disabled:opacity-40"
+                  >
+                    <ArrowUpDown className="h-4 w-4" aria-hidden />
+                  </button>
+                </>
+              )}
             </div>
 
             {territoriesQuery.isError && (
@@ -192,11 +244,11 @@ export default function HomeScreen() {
               className="mt-4 h-12 w-full rounded-full text-[15px] font-bold"
             >
               <Search className="mr-1 h-4 w-4" aria-hidden />
-              Buscar mensajeros
+              {mode === 'zone' ? 'Buscar mensajeros de zona' : 'Buscar mensajeros'}
             </Button>
             {!ready && (
               <p className="mt-2 text-center text-[11.5px] text-muted-foreground">
-                Elige origen y destino para buscar.
+                {mode === 'zone' ? 'Elige tu municipio para ver mensajeros de zona.' : 'Elige origen y destino para buscar.'}
               </p>
             )}
           </div>
@@ -274,22 +326,15 @@ export default function HomeScreen() {
           ) : popularQuery.data && popularQuery.data.routes.length > 0 ? (
             <div className="space-y-3">
               {popularQuery.data.routes.slice(0, 5).map((route) => (
-                <div key={route.id} className="relative">
-                  {route.nextDepartureAt && (
-                    <span className="absolute -top-2 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-orange px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                      <CalendarClock className="h-3 w-3" aria-hidden />
-                      Próxima salida
-                    </span>
-                  )}
-                  <RouteCard
-                    route={route}
-                    onOpen={() => {
-                      if (route.originId && route.destinationId) {
-                        openRoute(route.originId, route.destinationId)
-                      }
-                    }}
-                  />
-                </div>
+                <RouteCard
+                  key={route.id}
+                  route={route}
+                  onOpen={() => {
+                    if (route.originId && route.destinationId) {
+                      openRoute(route.originId, route.destinationId)
+                    }
+                  }}
+                />
               ))}
             </div>
           ) : (

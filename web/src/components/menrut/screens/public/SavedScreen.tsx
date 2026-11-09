@@ -170,7 +170,9 @@ function SavedRoutesTab({ userId }: { userId: string | null }) {
       <EmptyState
         icon={<Heart className="h-8 w-8" aria-hidden />}
         title="Inicia sesión para guardar rutas"
-        hint="Guarda trayectos y recibe avisos cuando aparezcan nuevas ofertas."
+        hint="Guarda trayectos y recibe avisos cuando aparezcan nuevas ofertas. La búsqueda sigue siendo libre, sin cuenta."
+        actionLabel="Iniciar sesión"
+        onAction={() => navigate('login')}
       />
     )
   }
@@ -337,7 +339,9 @@ function FavoritesTab({ userId }: { userId: string | null }) {
       <EmptyState
         icon={<Heart className="h-8 w-8" aria-hidden />}
         title="Inicia sesión para guardar favoritos"
-        hint="Marca mensajeros como favoritos y encuéntralos aquí al instante."
+        hint="Marca mensajeros como favoritos y encuéntralos aquí al instante. La búsqueda sigue siendo libre, sin cuenta."
+        actionLabel="Iniciar sesión"
+        onAction={() => navigate('login')}
       />
     )
   }

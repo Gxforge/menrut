@@ -100,12 +100,16 @@ export async function authSync(request: Request, env: V2Env, body: Record<string
     const profile = await db.prepare('SELECT id FROM CourierProfile WHERE userId=? LIMIT 1').bind(user.id).first<{ id: string }>();
     if (!profile) {
       const pid = newId();
+      // OJO: valores fijos como literales en el SQL y solo 4 parámetros
+      // (id, userId, createdAt, updatedAt). El INSERT anterior mezclaba 10
+      // placeholders con 7 binds y columnas NOT NULL recibiendo NULL → error
+      // 500 en /auth/sync para todo mensajero nuevo.
       await db.batch([
         db
           .prepare(
-            'INSERT INTO CourierProfile(id,userId,bio,yearsExperience,verificationStatus,isPublic,ratingAvg,ratingCount,verifiedDeliveries,baseFeeCup,availabilityNote,vehicleSummary,contactPreference,coverageType,isDemo,createdAt,updatedAt) VALUES(?,?,?,0,?,1,0,0,0,NULL,?,?,?, ?,0,?,?)'
+            "INSERT INTO CourierProfile(id,userId,bio,yearsExperience,verificationStatus,isPublic,ratingAvg,ratingCount,verifiedDeliveries,baseFeeCup,availabilityNote,vehicleSummary,contactPreference,coverageType,isDemo,createdAt,updatedAt) VALUES(?,?, '',0,'unverified',1,0,0,0,NULL,'','','chat','municipal',0,?,?)"
           )
-          .bind(pid, user.id, 'unverified', 'chat', 'municipal', now, now),
+          .bind(pid, user.id, now, now),
         db
           .prepare('INSERT INTO Wallet(id,courierId,permanenceCredits,toolCredits,lastConsumedAt,updatedAt) VALUES(?,?,0,0,NULL,?)')
           .bind(newId(), pid, now),

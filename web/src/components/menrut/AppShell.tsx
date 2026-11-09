@@ -11,12 +11,15 @@ import { BottomNav } from './core/BottomNav'
 import type { Role, ScreenId } from '@/lib/types'
 
 // Pantallas navegables como visitante (funciones públicas): la app abre en
-// Inicio y cualquiera puede BUSCAR sin cuenta. El registro/login solo se
-// piden al usar funciones personales (guardar, chatear, publicar rutas).
+// Inicio y cualquiera puede BUSCAR sin cuenta. Guardados y Mensajes también
+// son visitables: muestran una puerta de acceso (iniciar sesión) en lugar de
+// rebotar a Inicio. El registro/login solo se piden al usar funciones
+// personales (guardar, chatear, publicar rutas).
 // client-profile muestra una puerta de acceso (no datos personales).
 const PUBLIC_SCREENS: ScreenId[] = [
   'splash', 'login', 'register', 'recovery',
   'home', 'filters', 'results', 'passport', 'map', 'client-profile',
+  'saved', 'inbox',
 ]
 
 // Roles con acceso al panel de administración (jerarquía del backend:
