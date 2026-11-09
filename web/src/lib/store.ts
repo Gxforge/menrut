@@ -112,12 +112,22 @@ export const useAppStore = create<AppState>()(
     {
       name: 'menrut-store',
       storage: createJSONStorage(() => localStorage),
+      version: 1,
       // La pantalla NO se persiste: cada apertura de la app arranca en el
       // splash (comportamiento PWA) y de ahí a la pantalla del rol.
       partialize: (state) => ({
         session: state.session,
         search: state.search,
       }),
+      // Migración v0 → v1: la app anterior (Vite) sí persistía «screen»; si
+      // alguien quedó con un login abandonado en el almacenamiento local, se
+      // descarta aquí ANTES de fusionar, para que nunca arranque en login.
+      migrate: (persisted) => {
+        if (persisted && typeof persisted === 'object') {
+          delete (persisted as Record<string, unknown>).screen
+        }
+        return persisted as { session: AppState['session']; search: SearchFiltersState }
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true)
       },
