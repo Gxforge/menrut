@@ -7,7 +7,7 @@ Directorio de mensajeros de Cuba. **Versión funcional parcial, no lista para la
 - **Estado actual:** [informe](INFORME-ESTADO.md) · [migración y conexión](docs/22-MIGRACION-REACT-Y-CONEXION.md)
 
 ## Tecnología actual
-React + TypeScript + Vite, autorizado por el propietario. Cloudflare Pages/Functions, D1 CORE + dos shards, Supabase principal para Auth/Storage. Sin servidor Node permanente, R2 ni PostgreSQL comercial. Flutter anterior conservado como respaldo en `app/`.
+`web/` es la app **Next.js 16** (App Router, TypeScript, Tailwind, shadcn/ui), con Auth/Storage en Supabase. Build estático con `web/scripts/build-static.sh` → `web/out`, desplegado a Cloudflare Pages. La API sigue en `functions/api/v2` con D1 CORE + dos shards. Sin servidor Node permanente, R2 ni PostgreSQL comercial. Flutter anterior conservado como respaldo en `app/`.
 
 ## Desarrollo
 Node 22+, Python 3. Solo URL y clave **publicable** en `web/.env.local`; ejemplo en `web/.env.example`.

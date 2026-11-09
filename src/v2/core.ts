@@ -144,6 +144,7 @@ export interface SupabaseIdentity {
   sub: string;
   email: string | null;
   fullName: string | null;
+  accountRole: string | null;
 }
 
 export async function verifySupabaseToken(request: Request, env: V2Env): Promise<SupabaseIdentity | null> {
@@ -162,10 +163,15 @@ export async function verifySupabaseToken(request: Request, env: V2Env): Promise
     const meta = (payload.user_metadata ?? {}) as Record<string, unknown>;
     const fullName =
       typeof meta.full_name === 'string' && meta.full_name.trim() ? meta.full_name.trim() : null;
+    // Rol elegido al registrarse (client/courier/business), firmado por Supabase
+    // dentro del JWT verificado: respaldo para sync cuando el body no lo trae.
+    const accountRole =
+      typeof meta.account_role === 'string' && meta.account_role.trim() ? meta.account_role.trim() : null;
     return {
       sub: payload.sub,
       email: typeof payload.email === 'string' ? payload.email.toLowerCase() : null,
       fullName,
+      accountRole,
     };
   } catch {
     return null;

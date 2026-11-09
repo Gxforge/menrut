@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
 import { getSupabase } from '@/lib/supabase'
-import { syncUserWithBackend } from '@/lib/auth'
+import { syncUserWithBackend, readPendingRole, clearPendingRole } from '@/lib/auth'
 import type { SessionUser } from '@/lib/types'
 
 // Favorito local con sincronización al backend
@@ -39,7 +39,9 @@ export function useToggleFavorite(courierId: string, initial: boolean) {
   return { favorite, toggle, isPending: mutation.isPending }
 }
 
-// Restaurar sesión real de Supabase al arrancar la app
+// Restaurar sesión real de Supabase al arrancar la app.
+// Incluye un «perro guardián»: pase lo que pase (red caída, Supabase lento),
+// a los 6 s la app queda lista — la pantalla de carga nunca se queda eterna.
 export function useSessionBootstrap() {
   const setSession = useAppStore((s) => s.setSession)
   const session = useAppStore((s) => s.session)
@@ -47,15 +49,36 @@ export function useSessionBootstrap() {
 
   useEffect(() => {
     let cancelled = false
+    // Perro guardián: garantiza ready=true aunque todo lo demás falle
+    const watchdog = setTimeout(() => {
+      if (!cancelled) setReady(true)
+    }, 6_000)
     async function restore() {
       try {
         const { data } = await getSupabase().auth.getSession()
-        if (data.session && !cancelled) {
-          const user = await syncUserWithBackend()
+        if (cancelled) return
+        if (data.session) {
+          // Rol pendiente del registro: si Supabase exigió confirmación por
+          // correo, el flujo se cortó y la API v2 de producción (que solo
+          // acepta role por body) crearía la cuenta como «client». Se
+          // reaplica aquí y se limpia SOLO si el sync tiene éxito; si falla,
+          // queda guardado para el siguiente intento.
+          const pendingRole = readPendingRole()
+          const user = await syncUserWithBackend(pendingRole ?? undefined)
           if (!cancelled) setSession(user)
+          clearPendingRole()
+        } else {
+          // Sin sesión en Supabase: limpiar cualquier sesión fantasma que
+          // hubiera quedado persistida en el store (p. ej. cuenta borrada).
+          setSession(null)
         }
       } catch {
-        // sin sesión o backend caído: la app sigue como visitante
+        // Si Supabase sigue teniendo sesión (backend caído temporalmente)
+        // conservamos la sesión persistida; si no, limpiamos la fantasma.
+        const retry = await getSupabase()
+          .auth.getSession()
+          .catch(() => null)
+        if (!cancelled && !retry?.data?.session) setSession(null)
       } finally {
         if (!cancelled) setReady(true)
       }
@@ -63,6 +86,7 @@ export function useSessionBootstrap() {
     restore()
     return () => {
       cancelled = true
+      clearTimeout(watchdog)
     }
   }, [])
 
@@ -95,9 +119,12 @@ export function useUnreadMessages() {
   return data ?? 0
 }
 
-// Sincroniza sesión tras login/registro
+// Sincroniza sesión tras login/registro. Si no llega rol explícito se
+// reaplica el pendiente del registro (la API v2 de producción no lee los
+// metadatos de Supabase); tras un sync exitoso el pendiente se limpia.
 export async function completeLogin(role?: string): Promise<SessionUser> {
-  const user = await syncUserWithBackend(role)
+  const user = await syncUserWithBackend(role ?? readPendingRole() ?? undefined)
   useAppStore.getState().setSession(user)
+  clearPendingRole()
   return user
 }

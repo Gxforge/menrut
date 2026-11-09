@@ -6,10 +6,11 @@
 import { useState } from 'react'
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { MenrutMark } from '@/components/menrut/core/Brand'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { signInWithEmail, signOutSupabase } from '@/lib/auth'
+import { signInWithEmail, signOutSupabase, readPendingRole } from '@/lib/auth'
 import { completeLogin } from '@/components/menrut/hooks'
 import { useAppStore } from '@/lib/store'
 import type { SessionUser } from '@/lib/types'
@@ -49,7 +50,10 @@ export default function LoginScreen() {
     try {
       await signInWithEmail(email.trim(), password)
       try {
-        const user = await completeLogin()
+        // Primer login tras confirmar el correo: reaplica el rol elegido al
+        // registrarse (la API v2 de producción no lee metadatos de Supabase).
+        // completeLogin lo limpia solo si el sync tiene éxito.
+        const user = await completeLogin(readPendingRole() ?? undefined)
         toast.success(`Hola de nuevo, ${user.fullName.split(' ')[0]}.`)
         resetTo(homeFor(user))
       } catch {
@@ -79,8 +83,8 @@ export default function LoginScreen() {
       <div className="px-1 pt-4">
         <button
           type="button"
-          onClick={() => navigate('welcome')}
-          aria-label="Volver a la bienvenida"
+          onClick={() => navigate('home')}
+          aria-label="Volver al inicio"
           className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform active:scale-95"
         >
           <ArrowLeft className="h-5 w-5" aria-hidden />
@@ -90,14 +94,7 @@ export default function LoginScreen() {
       <div className="flex flex-1 flex-col justify-center py-6">
         <div className="rounded-3xl border border-line bg-card p-6 shadow-[0_18px_50px_rgba(20,67,130,0.10)]">
           <div className="flex flex-col items-center text-center">
-            <img
-              src="/menrut/icons/icon-web.png"
-              alt="Icono de MENRUT"
-              width={64}
-              height={64}
-              loading="eager"
-              className="rounded-2xl shadow-[0_10px_24px_rgba(11,43,96,0.18)]"
-            />
+            <MenrutMark className="h-16 w-16 rounded-2xl shadow-[0_10px_24px_rgba(11,43,96,0.18)]" />
             <h1 className="screen-title mt-4">Inicia sesión</h1>
             <p className="mt-1 text-[13px] text-muted-foreground">
               Vuelve a conectar con tus rutas.

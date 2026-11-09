@@ -247,17 +247,6 @@ export default function ChatScreen() {
     }
   }, [conversationId, onNewMessage])
 
-  // ── Refresco periódico sin tiempo real (producción) ──
-  // Sin WebSocket disponible, el historial se refresca cada 5 s mientras la
-  // conversación está abierta, de modo que los mensajes entrantes aparecen.
-  useEffect(() => {
-    if (!conversationId || live) return
-    const t = setInterval(() => {
-      qc.invalidateQueries({ queryKey: ['messages', conversationId] })
-    }, 5000)
-    return () => clearInterval(t)
-  }, [conversationId, live, qc])
-
   // ── Envío optimista con socket + fallback REST ──
   async function restSend(key: string, body: string) {
     try {

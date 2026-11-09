@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  ArrowUpDown, Bell, CalendarClock, Heart, Map, RotateCcw, Search,
+  ArrowUpDown, Bell, Bike, CalendarClock, Heart, Map, RotateCcw, Search,
   Users, Route as RouteIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ import { CourierCard } from '@/components/menrut/core/CourierCard'
 import { RouteCard } from '@/components/menrut/core/RouteCard'
 import { EmptyState, ListSkeleton, RouteSkeleton } from '@/components/menrut/core/EmptyState'
 import { api } from '@/lib/api'
+import { MenrutWordmark } from '@/components/menrut/core/Brand'
 import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import type { ProvinceDto } from '@/lib/types'
@@ -114,19 +115,7 @@ export default function HomeScreen() {
           className="pointer-events-none absolute -bottom-7 -right-6 h-36 w-36 rotate-[-14deg] text-white/[0.07]"
         />
         <div className="relative flex items-center justify-between pt-4">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/menrut/icons/icon-web.png"
-              alt="Icono de MENRUT"
-              width={38}
-              height={38}
-              className="rounded-xl"
-            />
-            <div>
-              <p className="font-display text-[14px] font-bold leading-none text-white">MENRUT</p>
-              <p className="mt-1 text-[10.5px] text-white/60">Cuba · Conectamos caminos</p>
-            </div>
-          </div>
+          <MenrutWordmark tone="light" className="h-9 w-auto" />
           <button
             type="button"
             onClick={handleNotifications}
@@ -213,7 +202,7 @@ export default function HomeScreen() {
           </div>
         </section>
 
-        {/* ── Accesos rápidos ──────────────────────────────────────────────── */}
+        {/* ── Accesos rápidos ────────────────────────────────────────────── */}
         <section aria-label="Accesos rápidos">
           <div className="grid grid-cols-3 gap-3">
             <Shortcut
@@ -233,6 +222,34 @@ export default function HomeScreen() {
             />
           </div>
         </section>
+
+        {/* ── ¿Haces mensajería? (registro de mensajero) ─────────────────── */}
+        {!session ? (
+          <section
+            aria-label="Publica tu ruta como mensajero"
+            className="rounded-2xl border border-dashed border-blue/40 bg-blue/[0.04] p-4"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue/10 text-blue">
+                <Bike className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13.5px] font-bold leading-tight">¿Haces mensajería?</p>
+                <p className="mt-0.5 text-[12px] leading-snug text-muted-foreground">
+                  Publica tus rutas y tu pasaporte profesional para que te encuentren.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 shrink-0 rounded-full px-4 font-bold"
+                onClick={() => navigate('register')}
+              >
+                Publicar
+              </Button>
+            </div>
+          </section>
+        ) : null}
 
         {/* ── Rutas populares ──────────────────────────────────────────────── */}
         <section aria-labelledby="home-popular">

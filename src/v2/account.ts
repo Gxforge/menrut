@@ -33,7 +33,16 @@ export async function authSync(request: Request, env: V2Env, body: Record<string
   await checkRate(env, `sync:${identity.sub}`, 30, 60_000);
 
   const bodyRole = asString(body?.role);
-  const wantedRole = VALID_BODY_ROLES.includes(bodyRole ?? '') ? (bodyRole as string) : null;
+  // Respaldo de metadatos (igual que en desarrollo): si el body no trae un rol
+  // válido se usa el guardado al registrarse (user_metadata.account_role,
+  // firmado por Supabase dentro del JWT ya verificado). Solo se admiten
+  // client/courier/business; el staff sigue viniendo de las listas de correos.
+  const metaRole = identity.accountRole;
+  const wantedRole = VALID_BODY_ROLES.includes(bodyRole ?? '')
+    ? (bodyRole as string)
+    : VALID_BODY_ROLES.includes(metaRole ?? '')
+      ? (metaRole as string)
+      : null;
   const fullName = identity.fullName ?? email;
 
   const isOwnerEmail = ownerEmails(env).includes(email);

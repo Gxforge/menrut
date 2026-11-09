@@ -82,7 +82,7 @@ export default function CompleteProfileScreen() {
   useEffect(() => {
     if (!hydrated) return
     if (!session) {
-      resetTo('welcome')
+      resetTo('home')
     } else if (session.role === 'client' || session.role === 'business') {
       resetTo('home')
     } else if (session.role === 'admin' || session.role === 'owner' || session.role === 'moderator') {
@@ -305,7 +305,7 @@ function FichaForm({
           const s = useAppStore.getState()
           const prev = s.history[s.history.length - 1]
           // Venimos del registro/login: no volver al formulario de acceso.
-          if (prev && ['login', 'register', 'recovery', 'welcome', 'splash'].includes(prev)) {
+          if (prev && ['login', 'register', 'recovery', 'splash'].includes(prev)) {
             s.resetTo('courier-home')
           } else if (s.history.length > 0) {
             s.back()

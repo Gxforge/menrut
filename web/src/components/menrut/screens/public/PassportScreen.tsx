@@ -210,7 +210,7 @@ export default function PassportScreen() {
 
       <main className="flex-1 space-y-6 px-4 pb-6">
         {/* ── Grid de datos (verificado vs declarado) ───────────────────────── */}
-        <section aria-label="Datos del mensajero" className="-mt-7">
+        <section aria-label="Datos del mensajero" className="-mt-3">
           <div className="grid grid-cols-2 gap-3">
             <DataCard
               icon={<Star className="h-4 w-4" aria-hidden />}
@@ -531,7 +531,7 @@ function PassportSkeleton() {
         <Skeleton className="mt-4 h-6 w-44" />
         <Skeleton className="mt-3 h-4 w-32" />
       </div>
-      <div className="-mt-7 space-y-3 px-4 pb-8">
+      <div className="-mt-3 space-y-3 px-4 pb-8">
         <div className="grid grid-cols-2 gap-3">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="rounded-2xl border border-line bg-card p-3.5">

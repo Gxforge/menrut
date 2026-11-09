@@ -1,6 +1,7 @@
 // MENRUT — Contrato de API (cliente tipado)
 // Todas las llamadas usan rutas relativas y adjuntan el JWT de Supabase.
 import { getAccessToken } from './auth'
+import { API_BASE } from './api-base'
 import type {
   ProvinceDto, CourierSearchItem, PassportDto, ConversationDto, MessageDto,
   NotificationDto, PlanDto, ToolDto, SavedRouteDto, WalletDto,
@@ -9,14 +10,28 @@ import type {
   SessionUser, PaymentProofDto, RequestPlanResponseDto, DecidePaymentPayload,
 } from './types'
 
+// Tiempo máximo de espera por petición: ninguna pantalla puede quedarse
+// «cargando» para siempre si la red se cae a mitad de solicitud.
+const REQUEST_TIMEOUT_MS = 20_000
+
 async function req<T>(path: string, init?: RequestInit & { auth?: boolean }): Promise<T> {
   const headers = new Headers(init?.headers)
-  if (init?.body) headers.set('Content-Type', 'application/json')
+  // La API v2 de producción exige Content-Type: application/json en TODOS los
+  // POST/PATCH/PUT (aunque vayan sin cuerpo, p. ej. marcar notificación leída);
+  // responde 415 en caso contrario. Tolerá un cuerpo vacío/sin parsear.
+  const method = (init?.method ?? 'GET').toUpperCase()
+  if (init?.body || ['POST', 'PATCH', 'PUT'].includes(method)) {
+    headers.set('Content-Type', 'application/json')
+  }
   if (init?.auth !== false) {
     const token = await getAccessToken()
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }
-  const res = await fetch(path, { ...init, headers })
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error || `Error ${res.status}`)
@@ -29,78 +44,78 @@ async function req<T>(path: string, init?: RequestInit & { auth?: boolean }): Pr
 export const api = {
   // Territorios (caché local de 24h; catálogo estable)
   territories: () =>
-    req<{ provinces: ProvinceDto[] }>('/api/v2/territories', { auth: false }),
+    req<{ provinces: ProvinceDto[] }>('/territories', { auth: false }),
 
   // Búsqueda de mensajeros por ruta
   search: (params: URLSearchParams) =>
-    req<{ results: CourierSearchItem[]; alternatives: string[] }>(`/api/v2/search?${params.toString()}`, { auth: false }),
+    req<{ results: CourierSearchItem[]; alternatives: string[] }>(`/search?${params.toString()}`, { auth: false }),
 
   // Pasaporte completo del mensajero
   passport: (courierId: string) =>
-    req<PassportDto>(`/api/v2/couriers/${courierId}`, { auth: false }),
+    req<PassportDto>(`/couriers/${courierId}`, { auth: false }),
 
   // Planes y herramientas (públicos)
-  plans: () => req<{ plans: PlanDto[] }>('/api/v2/plans', { auth: false }),
-  tools: () => req<{ tools: ToolDto[] }>('/api/v2/tools', { auth: false }),
+  plans: () => req<{ plans: PlanDto[] }>('/plans', { auth: false }),
+  tools: () => req<{ tools: ToolDto[] }>('/tools', { auth: false }),
 
   // Rutas populares (activas, sin sesión)
   popularRoutes: () =>
-    req<{ routes: RouteDto[]; couriers: Record<string, string> }>('/api/v2/routes/popular', { auth: false }),
+    req<{ routes: RouteDto[]; couriers: Record<string, string> }>('/routes/popular', { auth: false }),
 
   // ─── Perfil propio ────────────────────────────────────────────────────────
   updateProfile: (data: { fullName?: string; phone?: string; avatarUrl?: string }) =>
-    req<{ user: SessionUser }>('/api/v2/me', {
+    req<{ user: SessionUser }>('/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
   // ─── Sesión ───────────────────────────────────────────────────────────────
   report: (targetType: string, targetId: string, reason: string) =>
-    req<{ ok: true }>('/api/v2/reports', {
+    req<{ ok: true }>('/reports', {
       method: 'POST',
       body: JSON.stringify({ targetType, targetId, reason }),
     }),
 
   // ─── Favoritos y guardados ────────────────────────────────────────────────
   favorites: () =>
-    req<{ couriers: CourierSearchItem[] }>('/api/v2/favorites'),
+    req<{ couriers: CourierSearchItem[] }>('/favorites'),
   toggleFavorite: (courierId: string) =>
-    req<{ favorite: boolean }>('/api/v2/favorites', {
+    req<{ favorite: boolean }>('/favorites', {
       method: 'POST',
       body: JSON.stringify({ courierId }),
     }),
 
-  savedRoutes: () => req<{ routes: SavedRouteDto[] }>('/api/v2/saved-routes'),
+  savedRoutes: () => req<{ routes: SavedRouteDto[] }>('/saved-routes'),
   addSavedRoute: (originId: string, destinationId: string, label: string, alertsEnabled: boolean) =>
-    req<{ route: SavedRouteDto }>('/api/v2/saved-routes', {
+    req<{ route: SavedRouteDto }>('/saved-routes', {
       method: 'POST',
       body: JSON.stringify({ originId, destinationId, label, alertsEnabled }),
     }),
   deleteSavedRoute: (id: string) =>
-    req<{ ok: true }>(`/api/v2/saved-routes/${id}`, { method: 'DELETE' }),
+    req<{ ok: true }>(`/saved-routes/${id}`, { method: 'DELETE' }),
 
   // ─── Mensajes ─────────────────────────────────────────────────────────────
-  conversations: () => req<{ conversations: ConversationDto[] }>('/api/v2/conversations'),
+  conversations: () => req<{ conversations: ConversationDto[] }>('/conversations'),
   startConversation: (courierUserId: string) =>
-    req<{ conversation: ConversationDto }>('/api/v2/conversations', {
+    req<{ conversation: ConversationDto }>('/conversations', {
       method: 'POST',
       body: JSON.stringify({ courierUserId }),
     }),
   messages: (conversationId: string) =>
-    req<{ messages: MessageDto[] }>(`/api/v2/conversations/${conversationId}/messages`),
+    req<{ messages: MessageDto[] }>(`/conversations/${conversationId}/messages`),
   sendMessage: (conversationId: string, body: string) =>
-    req<{ message: MessageDto }>(`/api/v2/conversations/${conversationId}/messages`, {
+    req<{ message: MessageDto }>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ body }),
     }),
 
   // ─── Notificaciones ───────────────────────────────────────────────────────
-  notifications: () => req<{ notifications: NotificationDto[] }>('/api/v2/notifications'),
+  notifications: () => req<{ notifications: NotificationDto[] }>('/notifications'),
   markNotificationRead: (id: string) =>
-    req<{ ok: true }>(`/api/v2/notifications/${id}/read`, { method: 'POST' }),
+    req<{ ok: true }>(`/notifications/${id}/read`, { method: 'POST' }),
 
   // ─── Mensajero ────────────────────────────────────────────────────────────
-  courierDashboard: () => req<CourierDashboardDto>('/api/v2/courier/me'),
+  courierDashboard: () => req<CourierDashboardDto>('/courier/me'),
   updateCourierProfile: (data: {
     bio?: string
     yearsExperience?: number
@@ -110,33 +125,33 @@ export const api = {
     contactPreference?: string
     services?: string[]
   }) =>
-    req<{ ok: true }>('/api/v2/courier/me', {
+    req<{ ok: true }>('/courier/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  courierRoutes: () => req<{ routes: RouteDto[] }>('/api/v2/courier/me/routes'),
+  courierRoutes: () => req<{ routes: RouteDto[] }>('/courier/me/routes'),
   createRoute: (data: Record<string, unknown>) =>
-    req<{ route: RouteDto }>('/api/v2/courier/me/routes', {
+    req<{ route: RouteDto }>('/courier/me/routes', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   updateRoute: (id: string, data: Record<string, unknown>) =>
-    req<{ route: RouteDto }>(`/api/v2/courier/me/routes/${id}`, {
+    req<{ route: RouteDto }>(`/courier/me/routes/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
   deleteRoute: (id: string) =>
-    req<{ ok: true }>(`/api/v2/courier/me/routes/${id}`, { method: 'DELETE' }),
+    req<{ ok: true }>(`/courier/me/routes/${id}`, { method: 'DELETE' }),
   courierReviews: () =>
-    req<{ reviews: ReviewDto[]; distribution: Record<string, number> }>('/api/v2/courier/me/reviews'),
-  courierWallet: () => req<WalletDto>('/api/v2/courier/me/wallet'),
+    req<{ reviews: ReviewDto[]; distribution: Record<string, number> }>('/courier/me/reviews'),
+  courierWallet: () => req<WalletDto>('/courier/me/wallet'),
   requestMembership: (planCode: string, payment: { amountCup: number; method: string; reference: string; proofUrl?: string }) =>
-    req<{ ok: true; status: string }>('/api/v2/courier/me/membership', {
+    req<{ ok: true; status: string }>('/courier/me/membership', {
       method: 'POST',
       body: JSON.stringify({ planCode, ...payment }),
     }),
   submitVerification: (data: { documentUrl?: string; note: string }) =>
-    req<{ ok: true }>('/api/v2/courier/me/verification', {
+    req<{ ok: true }>('/courier/me/verification', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -145,7 +160,7 @@ export const api = {
   // El mensajero elige plan → recibe instrucciones → paga → sube captura →
   // el propietario/admin coteja y decide (approve/reject).
   requestPlan: (planId: string) =>
-    req<RequestPlanResponseDto>('/api/v2/payments/request', {
+    req<RequestPlanResponseDto>('/payments/request', {
       method: 'POST',
       body: JSON.stringify({ planId }),
     }),
@@ -155,10 +170,11 @@ export const api = {
     const token = await getAccessToken()
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`/api/v2/payments/${proofId}/proof`, {
+    const res = await fetch(`${API_BASE}/payments/${proofId}/proof`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: form,
+      signal: AbortSignal.timeout(60_000), // subir una captura puede tardar más
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
@@ -168,56 +184,56 @@ export const api = {
   },
 
   getMyPayments: () =>
-    req<{ payments: PaymentProofDto[] }>('/api/v2/payments/mine'),
+    req<{ payments: PaymentProofDto[] }>('/payments/mine'),
 
   // ─── Administración ───────────────────────────────────────────────────────
-  adminOverview: () => req<AdminOverviewDto>('/api/v2/admin/overview'),
+  adminOverview: () => req<AdminOverviewDto>('/admin/overview'),
   adminCouriers: (status?: string) =>
-    req<{ couriers: AdminCourierDto[] }>(`/api/v2/admin/couriers${status ? `?status=${status}` : ''}`),
+    req<{ couriers: AdminCourierDto[] }>(`/admin/couriers${status ? `?status=${status}` : ''}`),
   adminReviewVerification: (courierId: string, decision: 'verified' | 'rejected', note: string) =>
-    req<{ ok: true }>(`/api/v2/admin/couriers/${courierId}/verification`, {
+    req<{ ok: true }>(`/admin/couriers/${courierId}/verification`, {
       method: 'PATCH',
       body: JSON.stringify({ decision, note }),
     }),
-  adminAccounts: () => req<{ accounts: AdminAccountDto[] }>('/api/v2/admin/accounts'),
+  adminAccounts: () => req<{ accounts: AdminAccountDto[] }>('/admin/accounts'),
   adminPayments: (status?: string) =>
-    req<{ payments: AdminPaymentDto[] }>(`/api/v2/admin/payments${status ? `?status=${status}` : ''}`),
+    req<{ payments: AdminPaymentDto[] }>(`/admin/payments${status ? `?status=${status}` : ''}`),
   // Variante del contrato T8: mismo endpoint, nombre explícito para la UI.
   getAdminPayments: (status?: 'pending' | 'approved' | 'rejected' | 'all') =>
-    req<{ payments: AdminPaymentDto[] }>(`/api/v2/admin/payments${status ? `?status=${status}` : ''}`),
+    req<{ payments: AdminPaymentDto[] }>(`/admin/payments${status ? `?status=${status}` : ''}`),
   // Decisión del propietario/admin sobre una solicitud de pago (Transfermóvil).
   decidePayment: (id: string, payload: DecidePaymentPayload) =>
-    req<{ ok: true; status: string; expiresAt?: string }>(`/api/v2/admin/payments/${id}/decide`, {
+    req<{ ok: true; status: string; expiresAt?: string }>(`/admin/payments/${id}/decide`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
   adminReviewPayment: (id: string, decision: 'approved' | 'rejected', note: string) =>
-    req<{ ok: true }>(`/api/v2/admin/payments/${id}`, {
+    req<{ ok: true }>(`/admin/payments/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ decision, note }),
     }),
   adminSavePlan: (plan: Partial<PlanDto> & { code: string }) =>
-    req<{ plan: PlanDto }>('/api/v2/admin/plans', {
+    req<{ plan: PlanDto }>('/admin/plans', {
       method: 'POST',
       body: JSON.stringify(plan),
     }),
   adminSaveTool: (tool: Partial<ToolDto> & { code: string }) =>
-    req<{ tool: ToolDto }>('/api/v2/admin/tools', {
+    req<{ tool: ToolDto }>('/admin/tools', {
       method: 'POST',
       body: JSON.stringify(tool),
     }),
   adminModeration: () =>
-    req<{ reports: ReportFlagDto[]; audit: AuditLogDto[] }>('/api/v2/admin/moderation'),
+    req<{ reports: ReportFlagDto[]; audit: AuditLogDto[] }>('/admin/moderation'),
   adminResolveReport: (id: string, status: 'reviewed' | 'dismissed') =>
-    req<{ ok: true }>(`/api/v2/admin/reports/${id}`, {
+    req<{ ok: true }>(`/admin/reports/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
-  adminSystem: () => req<SystemStatusDto>('/api/v2/admin/system'),
+  adminSystem: () => req<SystemStatusDto>('/admin/system'),
   adminConfig: () =>
-    req<{ config: Record<string, string> }>('/api/v2/admin/config'),
+    req<{ config: Record<string, string> }>('/admin/config'),
   adminSaveConfig: (config: Record<string, string>) =>
-    req<{ ok: true }>('/api/v2/admin/config', {
+    req<{ ok: true }>('/admin/config', {
       method: 'POST',
       body: JSON.stringify({ config }),
     }),

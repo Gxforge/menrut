@@ -434,7 +434,7 @@ export function LogoutCard() {
     }
     qc.clear()
     logout()
-    resetTo('welcome')
+    resetTo('home')
     toast.success('Sesión cerrada. ¡Hasta pronto!')
   }
 

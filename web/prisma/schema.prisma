@@ -1,0 +1,394 @@
+// MENRUT — Schema de datos operativos
+// Diseñado para SQLite (dev) y compatible con Cloudflare D1 (prod).
+// Reglas del mega prompt: sin enums nativos (SQLite), sin arrays,
+// borrado lógico cuando aplique, auditoría en acciones sensibles.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Catálogo territorial (Cuba) ────────────────────────────────────────────
+
+model Province {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  sortOrder    Int           @default(0)
+  municipalities Municipality[]
+  routesOriginProvince      Route[] @relation("RouteOriginProvince")
+  routesDestinationProvince Route[] @relation("RouteDestinationProvince")
+}
+
+model Municipality {
+  id         String   @id @default(cuid())
+  provinceId String
+  name       String
+  province   Province @relation(fields: [provinceId], references: [id], onDelete: Cascade)
+
+  coverage          CourierCoverage[]
+  routesOrigin      Route[]           @relation("RouteOrigin")
+  routesDestination Route[]           @relation("RouteDestination")
+  @@unique([provinceId, name])
+  @@index([name])
+}
+
+// ─── Identidad y cuentas ────────────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  supabaseUserId String?   @unique
+  role           String    @default("client") // client | courier | business | admin | owner | moderator
+  fullName       String
+  phone          String?
+  avatarUrl      String?
+  status         String    @default("active") // active | suspended | deleted
+  hasUsedTrial   Boolean   @default(false)
+  isDemo         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  courierProfile   CourierProfile?
+  favorites        Favorite[]
+  savedRoutes      SavedRoute[]
+  sentMessages     Message[]         @relation("SentMessages")
+  conversationsA   Conversation[]    @relation("ConvClient")
+  conversationsB   Conversation[]    @relation("ConvCourier")
+  notifications    Notification[]
+  paymentProofs    PaymentProof[]
+  reviewsAuthored  Review[]          @relation("ReviewAuthor")
+  reportsFiled     ReportFlag[]      @relation("Reporter")
+  auditLogs        AuditLog[]
+}
+
+model CourierProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                String   @default("")
+  yearsExperience    Int      @default(0)
+  verificationStatus String   @default("unverified") // unverified | pending | verified | rejected
+  isPublic           Boolean  @default(true)
+  ratingAvg          Float    @default(0)
+  ratingCount        Int      @default(0)
+  verifiedDeliveries Int      @default(0)
+  baseFeeCup         Int?
+  availabilityNote   String   @default("")
+  vehicleSummary     String   @default("")
+  contactPreference  String   @default("chat") // chat | whatsapp | telefono
+  coverageType        String   @default("municipal") // zone | municipal | provincial
+  isDemo             Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  services    CourierService[]
+  coverage    CourierCoverage[]
+  routes      Route[]
+  reviews     Review[]          @relation("ReviewedCourier")
+  memberships Membership[]
+  wallet      Wallet?
+  verifications VerificationRequest[]
+  paymentProofs PaymentProof[]
+  favorites   Favorite[]
+
+  @@index([verificationStatus, isPublic])
+}
+
+model CourierService {
+  id          String @id @default(cuid())
+  courierId   String
+  courier     CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  serviceType String // paquetes | encargos | entregas_comerciales | otros
+  note        String?
+
+  @@unique([courierId, serviceType])
+}
+
+model CourierCoverage {
+  id             String @id @default(cuid())
+  courierId      String
+  courier        CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  municipalityId String
+  municipality   Municipality   @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+
+  @@unique([courierId, municipalityId])
+}
+
+// ─── Rutas y recorridos ─────────────────────────────────────────────────────
+
+model Route {
+  id                     String   @id @default(cuid())
+  courierId              String
+  courier                CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  originMunicipalityId   String?
+  originMunicipality     Municipality?  @relation("RouteOrigin", fields: [originMunicipalityId], references: [id])
+  destinationMunicipalityId String?
+  destinationMunicipality    Municipality? @relation("RouteDestination", fields: [destinationMunicipalityId], references: [id])
+  originProvinceId       String?
+  originProvince         Province?      @relation("RouteOriginProvince", fields: [originProvinceId], references: [id])
+  destinationProvinceId  String?
+  destinationProvince    Province?      @relation("RouteDestinationProvince", fields: [destinationProvinceId], references: [id])
+  scope                  String   @default("municipal") // municipal | provincial
+  stops                  String   @default("") // texto: municipios intermedios separados por coma
+  frequency              String   @default("personalizada") // diaria | semanal | personalizada | programada
+  daysNote               String   @default("")
+  serviceType            String   @default("paquetes")
+  vehicleType            String   @default("motor")
+  feeCup                 Int?
+  status                 String   @default("active") // active | scheduled | paused | closed
+  nextDepartureAt        DateTime?
+  notes                  String   @default("")
+  isDemo                 Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([originMunicipalityId, destinationMunicipalityId, status])
+  @@index([originProvinceId, destinationProvinceId, status])
+  @@index([courierId, status])
+}
+
+// ─── Reputación ─────────────────────────────────────────────────────────────
+
+model Review {
+  id         String   @id @default(cuid())
+  courierId  String
+  courier    CourierProfile @relation("ReviewedCourier", fields: [courierId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  rating     Int // 1..5
+  comment    String   @default("")
+  isVerified Boolean  @default(false) // vinculada a entrega verificada
+  status     String   @default("visible") // visible | hidden | flagged
+  response   String?
+  createdAt  DateTime @default(now())
+
+  @@index([courierId, status])
+}
+
+// ─── Membresías, planes y créditos ──────────────────────────────────────────
+
+model MembershipPlan {
+  id                 String  @id @default(cuid())
+  code               String  @unique
+  name               String
+  description        String  @default("")
+  durationDays       Int
+  priceCup           Int     @default(0)
+  permanenceCredits  Int     @default(0)
+  toolCredits        Int     @default(0)
+  isActive           Boolean @default(true)
+  isTrial            Boolean @default(false)
+  isProposal         Boolean @default(true) // importe pendiente de aprobación comercial
+  sortOrder          Int     @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  memberships   Membership[]
+  paymentProofs PaymentProof[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  courierId String
+  courier   CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      MembershipPlan @relation(fields: [planId], references: [id])
+  startedAt DateTime
+  expiresAt DateTime
+  status    String   @default("active") // active | expired | cancelled
+  createdAt DateTime @default(now())
+
+  @@index([courierId, status])
+}
+
+model Wallet {
+  id                 String   @id @default(cuid())
+  courierId          String   @unique
+  courier            CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  permanenceCredits  Int      @default(0)
+  toolCredits        Int      @default(0)
+  lastConsumedAt     DateTime?
+  updatedAt          DateTime @updatedAt
+
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id             String   @id @default(cuid())
+  walletId       String
+  wallet         Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  walletType     String // permanence | tools
+  actorId        String?  // null = sistema
+  reason         String
+  reference      String?
+  balanceBefore  Int
+  delta          Int // + o -
+  balanceAfter   Int
+  createdAt      DateTime @default(now())
+
+  @@index([walletId, createdAt])
+}
+
+model Tool {
+  id                     String  @id @default(cuid())
+  code                   String  @unique
+  name                   String
+  description            String  @default("")
+  tag                    String  @default("BÁSICO") // BÁSICO | PRO | DESTACADO | CRÉDITOS | GRATUITA | BLOQUEADA
+  minPlanCode            String? // plan mínimo requerido
+  creditCost             Int     @default(0)
+  requiresActiveMembership Boolean @default(true)
+  isActive               Boolean @default(true)
+  blockedMessage         String  @default("")
+  sortOrder              Int     @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+// ─── Guardados y favoritos ──────────────────────────────────────────────────
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courierId String
+  courier   CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courierId])
+}
+
+model SavedRoute {
+  id                     String  @id @default(cuid())
+  userId                 String
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originMunicipalityId   String
+  destinationMunicipalityId String
+  label                  String  @default("")
+  alertsEnabled          Boolean @default(true)
+  createdAt              DateTime @default(now())
+}
+
+// ─── Mensajes ───────────────────────────────────────────────────────────────
+
+model Conversation {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        User     @relation("ConvClient", fields: [clientId], references: [id])
+  courierId     String
+  courier       User     @relation("ConvCourier", fields: [courierId], references: [id])
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  messages Message[]
+
+  @@unique([clientId, courierId])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User       @relation("SentMessages", fields: [senderId], references: [id])
+  body           String
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ─── Notificaciones ─────────────────────────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String    @default("general") // ruta | mensaje | valoracion | membresia | admin | general
+  title     String
+  body      String    @default("")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+// ─── Pagos y verificaciones ─────────────────────────────────────────────────
+
+model PaymentProof {
+  id         String    @id @default(cuid())
+  courierId  String
+  courier    CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  submittedBy String
+  submitter  User      @relation(fields: [submittedBy], references: [id])
+  planId     String?
+  plan       MembershipPlan? @relation(fields: [planId], references: [id])
+  amountCup  Int       @default(0)
+  confirmedAmountCup Int? // cantidad que el propietario declaró recibir
+  method     String    @default("transfermovil") // transfermovil | transferencia | efectivo | otro
+  reference  String    @default("")
+  proofUrl   String    @default("")
+  status     String    @default("pending") // pending | approved | rejected
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([status, createdAt])
+}
+
+model VerificationRequest {
+  id          String   @id @default(cuid())
+  courierId   String
+  courier     CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  documentUrl String   @default("")
+  note        String   @default("")
+  status      String   @default("pending") // pending | approved | rejected
+  reviewedBy  String?
+  reviewNote  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+// ─── Moderación, auditoría y configuración ──────────────────────────────────
+
+model ReportFlag {
+  id         String   @id @default(cuid())
+  reporterId String
+  reporter   User     @relation("Reporter", fields: [reporterId], references: [id])
+  targetType String   @default("profile") // profile | review | conversation
+  targetId   String
+  reason     String
+  status     String   @default("open") // open | reviewed | dismissed
+  createdAt  DateTime @default(now())
+
+  @@index([status])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String   @default("")
+  detail     String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model PlatformConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

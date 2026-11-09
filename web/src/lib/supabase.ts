@@ -1,16 +1,16 @@
 // MENRUT — Cliente Supabase (Auth + Storage reales)
 // El anon key es público por diseño; la seguridad real está en RLS y en el
-// backend, que valida el JWT con la clave de servicio (nunca expuesta al cliente).
+// backend, que valida el JWT con service_role (nunca expuesto al cliente).
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let client: SupabaseClient | null = null
 
 export function getSupabase(): SupabaseClient {
   if (client) return client
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !anonKey) {
-    throw new Error('Supabase no configurado: faltan VITE_SUPABASE_URL o VITE_SUPABASE_PUBLISHABLE_KEY')
+    throw new Error('Supabase no configurado: faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
   client = createClient(url, anonKey, {
     auth: {

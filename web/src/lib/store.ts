@@ -49,7 +49,7 @@ export const DEFAULT_SEARCH: SearchFiltersState = {
 
 // Pantallas sin navegación inferior
 export const FULLSCREEN_SCREENS: ScreenId[] = [
-  'splash', 'welcome', 'login', 'register', 'recovery',
+  'splash', 'login', 'register', 'recovery',
 ]
 
 // Pantallas que pertenecen al panel admin (navegación propia)
@@ -90,7 +90,7 @@ export const useAppStore = create<AppState>()(
 
       logout: () => set({
         session: null,
-        screen: 'welcome',
+        screen: 'home',
         history: [],
         selectedCourierId: null,
         activeConversationId: null,
@@ -112,10 +112,11 @@ export const useAppStore = create<AppState>()(
     {
       name: 'menrut-store',
       storage: createJSONStorage(() => localStorage),
+      // La pantalla NO se persiste: cada apertura de la app arranca en el
+      // splash (comportamiento PWA) y de ahí a la pantalla del rol.
       partialize: (state) => ({
         session: state.session,
         search: state.search,
-        screen: state.screen === 'splash' ? 'splash' : state.screen,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true)

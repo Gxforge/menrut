@@ -1,15 +1,18 @@
 // MENRUT — Splash / Carga
-// Fondo azul nocturno con arcos de carretera (cian y naranja), icono y logo
-// reales, lema «Conectamos caminos.», carga corta y no bloqueante.
+// Muestra el logo ORIGINAL (PNG oficial convertido a WebP ligero, ~53 KB).
+// Tras un máximo de ~1,7 s avanza SIEMPRE: sesión → su pantalla · visitante →
+// INICIO con contenido (la búsqueda es pública; nadie ve un muro de registro).
+// El avance no depende de la red: aunque la restauración de sesión tarde,
+// la app entra y el contenido público se muestra de inmediato.
 'use client'
 
 import { useEffect } from 'react'
+import { MenrutMark } from '@/components/menrut/core/Brand'
 import { useAppStore } from '@/lib/store'
 
 export default function SplashScreen() {
   const session = useAppStore((s) => s.session)
   const resetTo = useAppStore((s) => s.resetTo)
-  const navigate = useAppStore((s) => s.navigate)
 
   useEffect(() => {
     const target = session
@@ -20,20 +23,19 @@ export default function SplashScreen() {
           : session.role === 'moderator'
             ? 'admin-moderation'
             : 'home'
-      : 'welcome'
+      : 'home'
     const t = setTimeout(() => {
       if (useAppStore.getState().screen === 'splash') {
         // El primer avance limpia el historial; luego la navegación es normal
-        if (!session) resetTo('welcome')
-        else resetTo(target as never)
+        resetTo(target as never)
       }
     }, 1700)
     return () => clearTimeout(t)
-  }, [session, resetTo, navigate])
+  }, [session, resetTo])
 
   return (
     <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden bg-deep px-6 text-center text-white">
-      {/* Arcos de carretera — motivo de marca (CSS ligero, sin imágenes pesadas) */}
+      {/* Arcos de carretera — motivo de marca (CSS puro, sin imágenes) */}
       <div
         aria-hidden
         className="pointer-events-none absolute -left-24 bottom-16 h-56 w-[560px] rounded-[50%] border-[22px] border-cyan/80 border-r-transparent border-b-transparent rotate-[-17deg] blur-[0.4px] drop-shadow-[0_0_16px_rgba(19,182,255,0.45)]"
@@ -47,26 +49,11 @@ export default function SplashScreen() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_60%_20%,rgba(26,105,201,0.55)_0%,rgba(11,62,139,0.35)_33%,rgba(7,29,67,0)_78%)]"
       />
 
-      <div className="relative z-10 flex flex-col items-center">
-        <img
-          src="/menrut/icons/icon-web.png"
-          alt="Icono de MENRUT"
-          width={112}
-          height={112}
-          loading="eager"
-          className="rounded-[26px] shadow-[0_14px_40px_rgba(0,22,62,0.55)]"
-        />
-        <img
-          src="/menrut/icons/logo-web.png"
-          alt="MENRUT"
-          width={210}
-          height={70}
-          loading="eager"
-          className="mt-4 drop-shadow-[0_8px_18px_rgba(0,27,77,0.6)]"
-        />
-        <p className="mt-1 text-[13px] font-medium text-[#d9ecff]">
-          Conectamos caminos.
-        </p>
+      {/* Logo original en WebP ligero (el icono ya trae sus esquinas redondeadas) */}
+      <div className="animate-in fade-in slide-in-from-bottom-3 relative z-10 flex flex-col items-center duration-700">
+        <div className="drop-shadow-[0_18px_44px_rgba(3,15,40,0.65)]">
+          <MenrutMark className="h-44 w-44 sm:h-48 sm:w-48" />
+        </div>
 
         <div
           aria-label="Cargando"

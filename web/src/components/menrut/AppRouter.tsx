@@ -5,7 +5,6 @@ import { useAppStore } from '@/lib/store'
 
 // Pública / cliente
 import SplashScreen from '@/components/menrut/screens/public/SplashScreen'
-import WelcomeScreen from '@/components/menrut/screens/public/WelcomeScreen'
 import LoginScreen from '@/components/menrut/screens/public/LoginScreen'
 import RegisterScreen from '@/components/menrut/screens/public/RegisterScreen'
 import RecoveryScreen from '@/components/menrut/screens/public/RecoveryScreen'
@@ -48,7 +47,6 @@ export function AppRouter() {
   switch (screen) {
     // Pública / cliente
     case 'splash': return <SplashScreen />
-    case 'welcome': return <WelcomeScreen />
     case 'login': return <LoginScreen />
     case 'register': return <RegisterScreen />
     case 'recovery': return <RecoveryScreen />

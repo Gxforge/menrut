@@ -1,6 +1,6 @@
 {
   "name": "menrut",
-  "pages_build_output_dir": "web/build",
+  "pages_build_output_dir": "web/out",
   "compatibility_date": "2026-05-01",
   "d1_databases": [
     {

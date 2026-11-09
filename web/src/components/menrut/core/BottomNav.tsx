@@ -31,7 +31,7 @@ const COURIER_TABS: Tab[] = [
 ]
 
 const HIDDEN_ON: ScreenId[] = [
-  'splash', 'welcome', 'login', 'register', 'recovery', 'chat',
+  'splash', 'login', 'register', 'recovery', 'chat',
   'admin-home', 'admin-couriers', 'admin-businesses', 'admin-payments',
   'admin-tools', 'admin-moderation', 'admin-settings', 'admin-system',
 ]
