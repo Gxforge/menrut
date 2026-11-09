@@ -1,13 +1,25 @@
-import {StrictMode,Suspense,lazy} from 'react';
-import {createRoot} from 'react-dom/client';
-import {Layout} from './components/Layout';
-import Home from './pages/Home';
-import './styles.css';
-const Account=lazy(()=>import('./pages/Account'));
-const Profile=lazy(()=>import('./pages/Profile'));
-const Information=lazy(()=>import('./pages/Information'));
-const Plans=lazy(()=>import('./pages/Plans'));
-const Admin=lazy(()=>import('./pages/Admin'));
-const path=window.location.pathname;
-createRoot(document.getElementById('root')!).render(<StrictMode><Layout><Suspense fallback={<div className="page wrap" role="status">Cargando esta sección…</div>}>{path==='/cuenta'?<Account/>:path.startsWith('/mensajero/')?<Profile slug={decodeURIComponent(path.split('/')[2])}/>:path==='/informacion'?<Information/>:path==='/planes'?<Plans/>:path==='/panel'?<Admin/>:<Home/>}</Suspense></Layout></StrictMode>);
-if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{/* Offline remains optional. */});});
+// MENRUT — PWA de una sola ruta. SPA interna con navegación por pantallas
+// (Zustand), datos con TanStack Query y auth real con Supabase.
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import Providers from './components/menrut/Providers'
+import AppShell from './components/menrut/AppShell'
+import { Toaster } from './components/ui/sonner'
+import './styles.css'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <Providers>
+      <AppShell />
+      <Toaster position="top-center" richColors />
+    </Providers>
+  </StrictMode>,
+)
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* Offline remains optional. */
+    })
+  })
+}
