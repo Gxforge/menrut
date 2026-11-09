@@ -12,3 +12,35 @@
 .join{background:linear-gradient(110deg,#071c50,#063b9e)}
 
 .brand img{display:block;width:216px;height:auto;max-width:100%;object-fit:contain}.brand{flex-shrink:0;font-style:normal;letter-spacing:normal}.footer-brand{width:max-content}.footer-brand img{width:190px}@media(max-width:760px){.brand img{width:178px}.footer-brand img{width:178px}}
+
+/* Planes, pagos Transfermóvil y panel del propietario. */
+.plans-head{max-width:640px;margin-bottom:34px}.plans-head h1{margin-bottom:12px}.plans-sub{color:var(--muted);font-size:14px}
+.duration-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}.duration-tabs button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:9px 16px;font-size:12px;font-weight:600;color:var(--muted)}.duration-tabs button.selected{background:var(--primary);border-color:var(--primary);color:#fff}
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-bottom:26px}.plans-grid.compact{margin-bottom:0}
+.plan-card{position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;display:flex;flex-direction:column}
+.plan-card.featured{border-color:var(--primary);box-shadow:0 14px 34px #006ee61f}
+.plan-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:9px;letter-spacing:1.4px;font-weight:750;padding:5px 12px;border-radius:14px}
+.plan-tag{font-size:10px;letter-spacing:1.6px;color:var(--primary);font-weight:750;margin-bottom:8px}
+.plan-card h2{font-size:26px;margin-bottom:14px}
+.plan-price{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}.plan-price strong{font-size:42px;font-weight:750;letter-spacing:-1px}.plan-price small{color:var(--muted);font-size:12px}
+.plan-save{font-size:12px;color:#0a7a3d;background:#e7f7ed;border-radius:14px;padding:5px 11px;width:max-content;margin-bottom:10px}
+.plan-desc{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+.plan-features{list-style:none;padding:0;margin:0 0 22px;display:grid;gap:10px}.plan-features li{display:flex;gap:9px;align-items:center;font-size:13px}.plan-features svg{color:var(--primary);flex-shrink:0}
+.plan-card .button{margin-top:auto}
+.pay-notice{max-width:760px}
+.payments .wallet-grid{margin-bottom:22px}
+.pay-open{position:relative}.pay-open h2{font-size:22px;margin-bottom:14px}
+.pay-status{font-size:10px;letter-spacing:1px;font-weight:700;padding:6px 12px;border-radius:16px;background:#eef4ff;color:#5b6b8a;display:inline-block;margin-bottom:14px}
+.pay-status.draft{background:#fff3d9;color:#8a6414}.pay-status.pending,.pay-status.under_review{background:#e0f1ff;color:#0057b7}.pay-status.credited,.pay-status.approved{background:#e2f6e8;color:#0a7a3d}.pay-status.rejected{background:#ffe9e0;color:#9c3d1e}.pay-status.cancelled{background:#f0f1f4;color:#6b7280}
+.pay-instructions{border:1px dashed #b7cae7;border-radius:12px;background:#f4f8ff;padding:20px;margin-bottom:20px}
+.pay-instructions h3{display:flex;align-items:center;gap:9px;font-size:15px;margin-bottom:12px}.pay-instructions h3 svg{color:var(--primary)}
+.pay-card-number{font-size:22px;font-weight:750;letter-spacing:2px;color:var(--ink);margin:0 0 8px}
+.pay-upload h3{font-size:15px;margin-bottom:14px}
+.pay-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.pay-review{padding:26px}.review-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}.review-head h3{margin-bottom:5px}
+.review-body{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start}
+.review-plan{font-size:15px;margin-bottom:8px}.review-info p{font-size:13px;color:var(--muted)}
+.review-proof{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f4f8ff}
+.review-proof img{display:block;width:100%;max-height:420px;object-fit:contain}
+.admin-page .plans-sub{margin-top:10px}
+@media(max-width:900px){.plans-grid{grid-template-columns:1fr}.review-body{grid-template-columns:1fr}.plan-price strong{font-size:36px}}

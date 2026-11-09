@@ -7,6 +7,7 @@ import {wallets} from './modules/credits';
 import {updateProfile} from './modules/profile';
 import {syncDirectory} from './modules/sync';
 import {updatePhoto} from './modules/photo';
+import {paymentSettings,createRequest,attachProof,myRequests,cancelRequest,adminList,adminDecide} from './modules/payments';
 export async function route(request:Request,env:Env):Promise<unknown> {
  const url=new URL(request.url), path=url.pathname.replace('/api/v1',''),method=request.method;
  if(method==='GET'&&path==='/health') return {service:'MenRut',status:'ok',scope:'foundation'};
@@ -19,11 +20,24 @@ export async function route(request:Request,env:Env):Promise<unknown> {
  const claims=await authenticate(request,env),uid=claims.sub;
  if(method==='GET'&&path==='/me') return {user_id:uid,account:await env.D1_CORE.prepare('SELECT status,created_at FROM global_accounts WHERE user_id=?').bind(uid).first()};
  if(method==='GET'&&path==='/me/roles') return (await env.D1_CORE.prepare('SELECT role FROM user_roles WHERE user_id=?').bind(uid).all()).results;
+ if(method==='GET'&&path==='/me/permissions') return (await env.D1_CORE.prepare('SELECT permission FROM admin_permissions WHERE user_id=?').bind(uid).all()).results;
  if(method==='POST'&&path==='/onboarding/courier') return onboarding(env,claims);
+ // Flujo de pago Transfermóvil: instrucciones, solicitud, captura y cancelación.
+ if(method==='GET'&&path==='/payments/settings') return paymentSettings(env);
+ if(method==='POST'&&path==='/payments/requests') return createRequest(env,uid,await request.json());
+ if(method==='GET'&&path==='/me/payments') return myRequests(env,uid);
+ const payAction=path.match(/^\/payments\/requests\/([A-Za-z0-9_-]+)\/(proof|cancel)$/);
+ if(payAction&&method==='POST') return payAction[2]==='proof'
+  ?attachProof(env,uid,payAction[1],await request.json())
+  :cancelRequest(env,uid,payAction[1]);
  if(path.startsWith('/admin/')) {
-  await permission(env,uid,path==='/admin/shards'?'shards.read':'audit.read');
+  const action=path==='/admin/shards'?'shards.read':path.startsWith('/admin/payments')?'payments.review':'audit.read';
+  await permission(env,uid,action);
   if(method==='GET'&&path==='/admin/shards') return (await env.D1_CORE.prepare('SELECT * FROM shard_registry').all()).results;
   if(method==='GET'&&path==='/admin/audit') return (await env.D1_CORE.prepare('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50').all()).results;
+  if(method==='GET'&&path==='/admin/payments') return adminList(env,url);
+  const decision=path.match(/^\/admin\/payments\/([A-Za-z0-9_-]+)\/decision$/);
+  if(method==='POST'&&decision) return adminDecide(env,uid,decision[1],await request.json());
   throw new ApiError('NOT_FOUND',404);
  }
  const db=await ownShard(env,uid);

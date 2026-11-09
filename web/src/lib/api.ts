@@ -19,6 +19,7 @@ const errors:Record<string,string>={
  SHARD_CAPACITY_REACHED:'No hay capacidad verificada para nuevas altas. Contacta con soporte.',
  MEMBERSHIP_EXPIRED:'Tu permanencia ha vencido. Tu información se conserva.',VALIDATION_ERROR:'Revisa los datos del formulario.',
  RATE_LIMITED:'Has realizado muchas solicitudes. Espera un minuto.',
+ PAYMENT_REQUEST_EXISTS:'Ya tienes una solicitud de pago abierta. Súbela captura o cancela antes de crear otra.',
 };
 export function message(error:unknown):string{
  if(error instanceof ApiError)return errors[error.code]??'No pudimos completar la operación. Inténtalo de nuevo.';
