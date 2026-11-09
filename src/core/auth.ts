@@ -17,7 +17,9 @@ export async function authenticate(request: Request,env: Env): Promise<JWTPayloa
  } catch(e) {if(e instanceof ApiError) throw e;throw new ApiError('UNAUTHENTICATED',401);}
 }
 export async function permission(env:Env,uid:string,action:string) {
- const row=await env.D1_CORE.prepare('SELECT 1 FROM admin_permissions WHERE user_id=? AND permission IN (?,?)').bind(uid,action,'*').first();
+ // 'owner' = propietario único con autoridad total; '*' = comodín; los moderadores
+ // solo reciben permisos específicos (p.ej. 'payments.review') sin acceso a configuración.
+ const row=await env.D1_CORE.prepare("SELECT 1 FROM admin_permissions WHERE user_id=? AND (permission='owner' OR permission='*' OR permission=?)").bind(uid,action).first();
  if (!row) throw new ApiError('FORBIDDEN',403);
 }
 export async function hmac(secret:string,value:string) {
