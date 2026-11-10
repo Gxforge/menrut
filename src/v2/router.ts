@@ -4,18 +4,17 @@
 // v3: identidad global + shards D1 (ver identity.ts, shard.ts).
 import type { V2Env } from './core';
 import { HttpError } from './core';
-import { plans, popularRoutes, search, territories, tools } from './public';
+import { search, territories } from './public';
+import { plans, popularRoutes, tools } from './catalog';
 import { passport, submitReview } from './passport';
+import { authSync, createReport, updateMe } from './account';
 import {
-  authSync,
-  createReport,
   createSavedRoute,
   deleteSavedRoute,
   listFavorites,
   listSavedRoutes,
   toggleFavorite,
-  updateMe,
-} from './account';
+} from './account-saved';
 import {
   listConversations,
   listMessages,
@@ -24,14 +23,8 @@ import {
   sendMessage,
   startConversation,
 } from './social';
-import {
-  courierDashboard,
-  courierReviews,
-  courierWallet,
-  requestMembership,
-  submitVerification,
-  updateCourierProfile,
-} from './courier';
+import { courierDashboard, courierReviews, courierWallet, updateCourierProfile } from './courier';
+import { requestMembership, submitVerification } from './courier-plan';
 import {
   createCourierRoute,
   deleteCourierRoute,

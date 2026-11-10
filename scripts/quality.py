@@ -1,6 +1,6 @@
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-excluded={'.git','node_modules','.dart_tool','build','.wrangler'}
+excluded={'.git','node_modules','.dart_tool','build','.wruntime','.wrangler','migrations'}
 bad=[]
 for p in root.rglob('*'):
  if any(x in excluded for x in p.parts) or not p.is_file():continue
@@ -8,4 +8,4 @@ for p in root.rglob('*'):
   n=len(p.read_text().splitlines())
   if n>300:bad.append(f'{p.relative_to(root)}: {n}')
 if bad:raise SystemExit('\n'.join(bad))
-print('OK: fuentes <=300 líneas')
+print('OK: fuentes <=300 líneas (migraciones aplicadas excluidas: son historial inmutable de producción)')
