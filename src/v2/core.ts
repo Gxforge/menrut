@@ -26,6 +26,8 @@ export interface V2Env {
   ADMIN_EMAILS: string;
   MODERATOR_EMAILS: string;
   TRIAL_HMAC_SECRET: string;
+  CRON_SECRET: string;
+  IS_SANDBOX: string;
   [key: `D1_SHARD_${string}`]: D1Database | undefined;
 }
 

@@ -3,8 +3,39 @@
 'use client'
 
 import {
-  ChevronRight, IdCard, LifeBuoy, FileText, Info, Lock, LogOut, ShieldCheck,
+  ChevronRight, IdCard, LifeBuoy, FileText, Info, Lock, LogOut, ShieldCheck, PackageCheck,
 } from 'lucide-react'
+
+// Fila reutilizable (icono + título + subtítulo + chevron).
+function Row({
+  icon, iconClass, title, subtitle, onClick, danger,
+}: {
+  icon: React.ReactNode
+  iconClass: string
+  title: string
+  subtitle: string
+  onClick: () => void
+  danger?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/60 active:bg-secondary"
+    >
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block text-[13.5px] font-semibold leading-tight ${danger ? 'text-destructive' : ''}`}>
+          {title}
+        </span>
+        <span className="block text-[11.5px] text-muted-foreground">{subtitle}</span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+    </button>
+  )
+}
 
 // 1 · Datos del pasaporte
 export function PassportSection({ onPassport }: { onPassport: () => void }) {
@@ -12,47 +43,44 @@ export function PassportSection({ onPassport }: { onPassport: () => void }) {
     <section className="mt-5" aria-label="Datos del pasaporte">
       <h2 className="section-title mb-2.5">Datos del pasaporte</h2>
       <nav className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
-        <button
-          type="button"
+        <Row
+          icon={<IdCard className="h-[18px] w-[18px]" aria-hidden />}
+          iconClass="bg-blue/10 text-blue"
+          title="Editar pasaporte"
+          subtitle="Presentación, experiencia y verificación"
           onClick={onPassport}
-          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/60 active:bg-secondary"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-blue">
-            <IdCard className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-semibold leading-tight">Editar pasaporte</span>
-            <span className="block text-[11.5px] text-muted-foreground">
-              Presentación, experiencia y verificación
-            </span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
+        />
       </nav>
     </section>
   )
 }
 
-// 4 · Seguridad
-export function SecuritySection({ onPwdOpen, onLogoutOpen }: { onPwdOpen: () => void; onLogoutOpen: () => void }) {
+// 4 · Seguridad y actividad
+export function SecuritySection({
+  onPwdOpen, onLogoutOpen, onDeliveries,
+}: {
+  onPwdOpen: () => void
+  onLogoutOpen: () => void
+  onDeliveries: () => void
+}) {
   return (
     <section className="mt-5" aria-label="Seguridad">
-      <h2 className="section-title mb-2.5">Seguridad</h2>
+      <h2 className="section-title mb-2.5">Seguridad y actividad</h2>
       <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
-        <button
-          type="button"
+        <Row
+          icon={<PackageCheck className="h-[18px] w-[18px]" aria-hidden />}
+          iconClass="bg-blue/10 text-blue"
+          title="Entregas verificadas"
+          subtitle="Verifica con el código OTP de tu cliente"
+          onClick={onDeliveries}
+        />
+        <Row
+          icon={<Lock className="h-[18px] w-[18px]" aria-hidden />}
+          iconClass="bg-blue/10 text-blue"
+          title="Cambiar contraseña"
+          subtitle="Actualiza tu clave de acceso"
           onClick={onPwdOpen}
-          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/60 active:bg-secondary"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-blue">
-            <Lock className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-semibold leading-tight">Cambiar contraseña</span>
-            <span className="block text-[11.5px] text-muted-foreground">Actualiza tu clave de acceso</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
+        />
         <button
           type="button"
           onClick={onLogoutOpen}
@@ -79,27 +107,20 @@ export function HelpSection({ onAyudaOpen }: { onAyudaOpen: () => void }) {
     <section className="mt-5" aria-label="Ayuda">
       <h2 className="section-title mb-2.5">Ayuda</h2>
       <nav className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
-        <button
-          type="button"
+        <Row
+          icon={<LifeBuoy className="h-[18px] w-[18px]" aria-hidden />}
+          iconClass="bg-blue/10 text-blue"
+          title="Soporte"
+          subtitle="Dudas frecuentes de mensajeros"
           onClick={onAyudaOpen}
-          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/60 active:bg-secondary"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-blue">
-            <LifeBuoy className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-semibold leading-tight">Soporte</span>
-            <span className="block text-[11.5px] text-muted-foreground">Dudas frecuentes de mensajeros</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
+        />
       </nav>
     </section>
   )
 }
 
 // 6 · Acerca de
-export function AboutSection({ onTerminosOpen, onPrivacidadOpen }: { onTerminosOpen: () => void; onPrivacidadOpen: () => void }) {
+export function AboutSection({ onTerminosOpen, onPrivacidad }: { onTerminosOpen: () => void; onPrivacidad: () => void }) {
   return (
     <section className="mt-5" aria-label="Acerca de">
       <h2 className="section-title mb-2.5">Acerca de</h2>
@@ -113,34 +134,20 @@ export function AboutSection({ onTerminosOpen, onPrivacidadOpen }: { onTerminosO
             <p className="text-[11.5px] text-muted-foreground">Conectamos caminos. · Versión 1.0.0-dev</p>
           </div>
         </div>
-        <button
-          type="button"
+        <Row
+          icon={<FileText className="h-[18px] w-[18px]" aria-hidden />}
+          iconClass="bg-blue/10 text-blue"
+          title="Términos y condiciones"
+          subtitle="Resumen de las reglas de uso"
           onClick={onTerminosOpen}
-          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/60 active:bg-secondary"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-blue">
-            <FileText className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-semibold leading-tight">Términos y condiciones</span>
-            <span className="block text-[11.5px] text-muted-foreground">Resumen de las reglas de uso</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
-        <button
-          type="button"
-          onClick={onPrivacidadOpen}
-          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/60 active:bg-secondary"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-blue">
-            <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-semibold leading-tight">Política de privacidad</span>
-            <span className="block text-[11.5px] text-muted-foreground">Qué datos usamos y para qué</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
+        />
+        <Row
+          icon={<ShieldCheck className="h-[18px] w-[18px]" aria-hidden />}
+          iconClass="bg-blue/10 text-blue"
+          title="Privacidad y datos"
+          subtitle="Qué datos usamos, derechos y borrado de cuenta"
+          onClick={onPrivacidad}
+        />
       </div>
     </section>
   )

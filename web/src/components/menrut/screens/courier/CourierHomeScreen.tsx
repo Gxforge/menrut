@@ -5,8 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
-  Route as RouteIcon, Star, Sparkles, Settings, IdCard, ShieldCheck, Crown,
-} from 'lucide-react'
+  Route as RouteIcon, Star, Sparkles, Settings, IdCard, ShieldCheck, Crown, PackageCheck } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
 import { initials } from '@/lib/format'
@@ -72,6 +71,7 @@ export default function CourierHomeScreen() {
       screen: 'courier-routes',
     },
     { icon: Star, label: 'Mi reputación', hint: 'Opiniones y entregas verificadas', screen: 'reputation' },
+    { icon: PackageCheck, label: 'Entregas verificadas', hint: 'Verifica con el código OTP del cliente', screen: 'courier-deliveries' },
     { icon: Crown, label: 'Membresía', hint: 'Plan, permanencia y renovación', screen: 'membership' },
     { icon: Sparkles, label: 'Créditos y herramientas', hint: 'Saldo y funciones disponibles', screen: 'tools' },
     {

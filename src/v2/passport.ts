@@ -14,6 +14,7 @@ import {
 import { requireAuth } from './identity';
 import { assignedShard } from './shard';
 import { syncProjection } from './shard';
+import { verifiedDeliveryFor } from './deliveries';
 import { toReviewDto, toRouteDto, SHARD_ROUTE_SELECT, type RouteRow } from './dto';
 
 /** Adjunta nombres de municipios/provincias (catálogo CORE) a las rutas del shard. */
@@ -202,6 +203,15 @@ export async function submitReview(request: Request, env: V2Env, courierId: stri
     .first<{ user_id: string; rating_sum: number; rating_count: number }>();
   if (!profile) throw new HttpError(404, 'Mensajero no encontrado.');
 
+  // Entrega verificada opcional (OTP): solo cuenta si es del propio autor,
+  // de este mensajero y ya confirmada con el código.
+  let verificationId: string | null = null;
+  const deliveryId = asString(body.deliveryId)?.trim() ?? '';
+  if (deliveryId) {
+    verificationId = await verifiedDeliveryFor(sdb, courierId, user.id, deliveryId);
+    if (!verificationId) throw new HttpError(400, 'La entrega indicada no está verificada a tu nombre.');
+  }
+
   const id = newId();
   const ratingSum = profile.rating_sum + rating;
   const ratingCount = profile.rating_count + 1;
@@ -209,9 +219,9 @@ export async function submitReview(request: Request, env: V2Env, courierId: stri
     sdb
       .prepare(
         `INSERT INTO reviews(id,verification_id,courier_id,author_id,rating,comment,is_verified,status,created_at)
-         VALUES(?,NULL,?,?,?,?,0,'published',?)`
+         VALUES(?,?,?,?,?,?,?,'published',?)`
       )
-      .bind(id, courierId, user.id, rating, comment, nowMs()),
+      .bind(id, verificationId, courierId, user.id, rating, comment, verificationId ? 1 : 0, nowMs()),
     sdb
       .prepare('UPDATE courier_profiles SET rating_sum=?, rating_count=?, version=version+1, updated_at=unixepoch() WHERE user_id=?')
       .bind(ratingSum, ratingCount, courierId),
@@ -225,7 +235,10 @@ export async function submitReview(request: Request, env: V2Env, courierId: stri
   await syncProjection(env, courierId).catch(() => null);
 
   return {
-    review: toReviewDto({ id, rating, comment, isVerified: 0, response: null, createdAt: nowMs() }, user.fullName),
+    review: toReviewDto(
+      { id, rating, comment, isVerified: verificationId ? 1 : 0, response: null, createdAt: nowMs() },
+      user.fullName,
+    ),
     ratingAvg: ratingCount > 0 ? ratingSum / ratingCount : 0,
     ratingCount,
   };

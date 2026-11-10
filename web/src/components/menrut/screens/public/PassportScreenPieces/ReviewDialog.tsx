@@ -1,7 +1,7 @@
 // MENRUT — PassportScreen · diálogo de valoración (opinión con estrellas).
 'use client'
 
-import { Loader2, Star } from 'lucide-react'
+import { Loader2, ShieldCheck, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -15,6 +15,9 @@ export function ReviewDialog({
   onRatingChange,
   comment,
   onCommentChange,
+  canLinkDelivery,
+  linkDelivery,
+  onLinkDeliveryChange,
   pending,
   onSubmit,
 }: {
@@ -25,6 +28,9 @@ export function ReviewDialog({
   onRatingChange: (r: number) => void
   comment: string
   onCommentChange: (v: string) => void
+  canLinkDelivery: boolean
+  linkDelivery: boolean
+  onLinkDeliveryChange: (v: boolean) => void
   pending: boolean
   onSubmit: () => void
 }) {
@@ -71,6 +77,39 @@ export function ReviewDialog({
           className="rounded-xl"
           maxLength={600}
         />
+        {canLinkDelivery && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={linkDelivery}
+            onClick={() => onLinkDeliveryChange(!linkDelivery)}
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-[12.5px] transition-colors',
+              linkDelivery
+                ? 'border-success/40 bg-success/10 text-success'
+                : 'border-line bg-card text-muted-foreground hover:bg-secondary/50',
+            )}
+          >
+            <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="flex-1 font-semibold">
+              Marcar como entrega verificada (código OTP usado)
+            </span>
+            <span
+              aria-hidden
+              className={cn(
+                'flex h-5 w-9 items-center rounded-full px-0.5 transition-colors',
+                linkDelivery ? 'bg-success' : 'bg-muted',
+              )}
+            >
+              <span
+                className={cn(
+                  'h-4 w-4 rounded-full bg-white transition-transform',
+                  linkDelivery && 'translate-x-4',
+                )}
+              />
+            </span>
+          </button>
+        )}
         <DialogFooter className="flex-row gap-2">
           <Button
             variant="outline"

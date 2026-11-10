@@ -17,6 +17,7 @@ export interface SearchProfile {
   vehicleSummary: string;
   coverageType: string;
   isDemo: number;
+  highlightedUntil: number;
   services: string[];
   coverage: Array<{ municipalityId: string; name: string }>;
   routes: RoutePayload[];
@@ -167,6 +168,7 @@ export function toSearchItem(
     feeCup: p.baseFeeCup,
     isDemo: !!p.isDemo,
     coverageType: p.coverageType,
+    isHighlighted: p.highlightedUntil > Date.now(),
     matchReasons: reasons,
     coverage: p.coverage.map((c) => c.name),
     nextDepartureAt: nextDepartureAt ? new Date(nextDepartureAt).toISOString() : null,
@@ -185,12 +187,15 @@ export function sortMatches(matches: SortableMatch[], sort: string): SortableMat
     const rb = b.item.ratingAvg as number;
     const ca = a.item.ratingCount as number;
     const cb = b.item.ratingCount as number;
-    if (sort === 'rating') return rb - ra || cb - ca;
+    // Destacados (herramienta activa) encabezan su grupo de relevancia.
+    const ha = a.item.isHighlighted ? 0 : 1;
+    const hb = b.item.isHighlighted ? 0 : 1;
+    if (sort === 'rating') return ha - hb || rb - ra || cb - ca;
     if (sort === 'availability') {
       const av = ((a.item.availabilityNote as string) ? 0 : 1) - ((b.item.availabilityNote as string) ? 0 : 1);
       if (av !== 0) return av;
-      return rb - ra || cb - ca;
+      return ha - hb || rb - ra || cb - ca;
     }
-    return a.tier - b.tier || a.verifiedRank - b.verifiedRank || rb - ra || cb - ca;
+    return a.tier - b.tier || ha - hb || a.verifiedRank - b.verifiedRank || rb - ra || cb - ca;
   });
 }

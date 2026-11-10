@@ -126,8 +126,8 @@ export async function syncProjection(env: V2Env, uid: string): Promise<void> {
        (user_id,slug,name,description,province_id,municipality_id,photo_path,available,visible,
         expires_at,version,updated_at,rating_sum,review_count,coverage_type,vehicle_summary,
         availability_note,base_fee_cup,years_experience,contact_preference,verified_deliveries,
-        is_verified,is_demo,services_csv,coverage_csv,routes_json)
-       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        is_verified,is_demo,services_csv,coverage_csv,routes_json,highlighted_until)
+       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON CONFLICT(user_id) DO UPDATE SET
         name=excluded.name, description=excluded.description, province_id=excluded.province_id,
         municipality_id=excluded.municipality_id, photo_path=excluded.photo_path,
@@ -139,7 +139,8 @@ export async function syncProjection(env: V2Env, uid: string): Promise<void> {
         contact_preference=excluded.contact_preference,
         verified_deliveries=excluded.verified_deliveries, is_verified=excluded.is_verified,
         is_demo=excluded.is_demo, services_csv=excluded.services_csv,
-        coverage_csv=excluded.coverage_csv, routes_json=excluded.routes_json
+        coverage_csv=excluded.coverage_csv, routes_json=excluded.routes_json,
+        highlighted_until=excluded.highlighted_until
        WHERE excluded.version>public_courier_directory.version`
     ).bind(
       uid, p.slug, name?.full_name ?? 'Mensajero', p.description, p.province_id, p.municipality_id,
@@ -147,6 +148,7 @@ export async function syncProjection(env: V2Env, uid: string): Promise<void> {
       p.rating_sum, p.rating_count, p.coverage_type, p.vehicle_summary, p.availability_note,
       p.base_fee_cup, p.years_experience, p.contact_preference, p.verified_deliveries,
       p.verification_status === 'verified' ? 1 : 0, p.is_demo, p.services_csv, p.coverage_csv, routesJson,
+      p.highlighted_until ?? 0,
     ),
     env.D1_CORE.prepare('INSERT OR IGNORE INTO sync_inbox(event_id) VALUES(?)').bind(event),
   ]);

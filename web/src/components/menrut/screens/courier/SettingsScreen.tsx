@@ -17,7 +17,7 @@ import {
   AboutSection, HelpSection, PassportSection, SecuritySection,
 } from './SettingsScreenPieces/MenuSections'
 import {
-  HelpDialog, LogoutDialog, PasswordDialog, PrivacyDialog, TermsDialog,
+  HelpDialog, LogoutDialog, PasswordDialog, TermsDialog,
 } from './SettingsScreenPieces/SettingsDialogs'
 import { AVISOS_INICIALES, AVISOS_KEY, type Avisos } from './SettingsScreenPieces/helpers'
 
@@ -42,7 +42,6 @@ export default function SettingsScreen() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [ayudaOpen, setAyudaOpen] = useState(false)
   const [terminosOpen, setTerminosOpen] = useState(false)
-  const [privacidadOpen, setPrivacidadOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -127,13 +126,17 @@ export default function SettingsScreen() {
         <AvisosSection avisos={avisos} onToggle={toggleAviso} />
 
         {/* 4 · Seguridad */}
-        <SecuritySection onPwdOpen={() => setPwdOpen(true)} onLogoutOpen={() => setLogoutOpen(true)} />
+        <SecuritySection
+          onPwdOpen={() => setPwdOpen(true)}
+          onLogoutOpen={() => setLogoutOpen(true)}
+          onDeliveries={() => navigate('courier-deliveries')}
+        />
 
         {/* 5 · Ayuda */}
         <HelpSection onAyudaOpen={() => setAyudaOpen(true)} />
 
         {/* 6 · Acerca de */}
-        <AboutSection onTerminosOpen={() => setTerminosOpen(true)} onPrivacidadOpen={() => setPrivacidadOpen(true)} />
+        <AboutSection onTerminosOpen={() => setTerminosOpen(true)} onPrivacidad={() => navigate('privacy')} />
 
         <p className="mt-6 text-center text-[11px] text-muted-foreground">
           MENRUT · Conectamos caminos.
@@ -162,7 +165,6 @@ export default function SettingsScreen() {
       <TermsDialog open={terminosOpen} onOpenChange={setTerminosOpen} />
 
       {/* Privacidad */}
-      <PrivacyDialog open={privacidadOpen} onOpenChange={setPrivacidadOpen} />
     </div>
   )
 }

@@ -13,9 +13,11 @@ export type ScreenId =
   | 'splash' | 'welcome' | 'login' | 'register' | 'recovery' | 'complete-profile'
   | 'home' | 'filters' | 'results' | 'passport' | 'map' | 'saved'
   | 'inbox' | 'chat' | 'notifications' | 'client-profile' | 'business-profile'
+  | 'privacy'
   // Mensajero
   | 'courier-home' | 'courier-routes' | 'route-form' | 'reputation'
   | 'membership' | 'plan-options' | 'tools' | 'settings'
+  | 'courier-deliveries'
   // Administración
   | 'admin-home' | 'admin-couriers' | 'admin-businesses' | 'admin-payments'
   | 'admin-tools' | 'admin-moderation' | 'admin-settings' | 'admin-system'
@@ -72,6 +74,7 @@ export interface CourierSearchItem {
   feeCup: number | null
   isDemo: boolean
   coverageType: CoverageType
+  isHighlighted?: boolean // herramienta «destacar» activa
   matchReasons: string[] // p. ej. "Cubre tu ruta", "Ruta frecuente", "Cobertura en tu municipio"
   coverage: string[] // nombres de municipios
   nextDepartureAt: string | null
@@ -131,6 +134,24 @@ export interface PassportDto {
   routes: RouteDto[]
   reviews: ReviewDto[]
   isDemo: boolean
+}
+
+// ─── Entregas verificadas por OTP ─────────────────────────────────────────
+
+export interface DeliveryDto {
+  id: string
+  courierId: string
+  clientId: string
+  clientName?: string | null
+  expiresAt: string
+  confirmedAt: string | null
+  status: 'pending' | 'verified' | 'expired'
+}
+
+export interface CreatedDeliveryDto {
+  delivery: { id: string; courierId: string; expiresAt: number; status: string }
+  code: string
+  expiresInSec: number
 }
 
 // ─── Favoritos y guardados ──────────────────────────────────────────────────

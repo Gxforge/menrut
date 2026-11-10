@@ -13,8 +13,10 @@ import {
   MapPin,
   Info,
   Activity,
+  RefreshCw,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { formatDateTime } from '@/lib/format'
 import { useAppStore } from '@/lib/store'
 import { AdminScreen } from '@/components/menrut/screens/admin/_AdminNav'
 import { EmptyState } from '@/components/menrut/core/EmptyState'
@@ -182,6 +184,35 @@ export default function AdminSystemScreen() {
               Proporción de mensajeros de ejemplo (demo) sobre el total de mensajeros.
             </p>
           </div>
+
+          {/* Reconciliación programada (cada 6 h + cron externo) */}
+          {data.reconciliation && (
+            <div className="rounded-2xl border border-line bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex items-center gap-2 text-[13px] font-semibold">
+                  <RefreshCw className={cn('h-4 w-4', data.reconciliation.ok ? 'text-success' : 'text-orange')} aria-hidden />
+                  Reconciliación programada
+                </p>
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-[11px] font-bold',
+                    data.reconciliation.ok ? 'bg-success/10 text-success' : 'bg-orange/10 text-orange',
+                  )}
+                >
+                  {data.reconciliation.ok ? 'OK' : 'Con incidencias'}
+                </span>
+              </div>
+              <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+                Última corrida: <strong>{formatDateTime(data.reconciliation.startedAt)}</strong> ·
+                perfiles sincronizados: {data.reconciliation.synced} · reservas liberadas:{' '}
+                {data.reconciliation.reservationsReleased} · reparaciones:{' '}
+                {data.reconciliation.orphansRepaired}.
+              </p>
+              {!data.reconciliation.ok && (
+                <p className="mt-1 text-[11.5px] text-orange">{data.reconciliation.detail}</p>
+              )}
+            </div>
+          )}
 
           {/* Nota de honestidad */}
           <div className="flex items-start gap-2.5 rounded-2xl border border-line bg-secondary/60 p-3.5">

@@ -1,10 +1,19 @@
 // MENRUT v2 — Envoltorio de la API operativa (/api/v2/*) para Pages Functions.
 // Aplica CORS (mismo origen + ALLOWED_ORIGIN), exige JSON (salvo la subida de
 // capturas multipart), limita el payload y responde con {error: mensaje}.
+// Además dispara la reconciliación programada (cada 6 h) en background vía
+// waitUntil: nunca bloquea ni rompe la request del usuario.
 import { route } from '../../../src/v2/router';
 import { HttpError, type V2Env } from '../../../src/v2/core';
+import { maybeStartScheduled } from '../../../src/v2/reconcile';
 
-export const onRequest: PagesFunction<V2Env> = async ({ request, env }) => {
+export const onRequest: PagesFunction<V2Env> = async ({ request, env, waitUntil }) => {
+  // Reconciliación programada por tráfico (si toca; barato: 1 SELECT).
+  try {
+    waitUntil(maybeStartScheduled(env));
+  } catch {
+    /* opcional en runtimes sin waitUntil */
+  }
   const requestId = crypto.randomUUID();
   const origin = request.headers.get('Origin');
   const sameOrigin = origin === new URL(request.url).origin;

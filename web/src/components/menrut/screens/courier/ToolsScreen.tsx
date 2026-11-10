@@ -1,11 +1,16 @@
-// MENRUT — Créditos y herramientas del mensajero
+// MENRUT — Créditos y herramientas del mensajero (flujo completo:
+// reserva → confirmación → liberación; el vencimiento devuelve el crédito).
+// Las reservas activas y su historial viven en ./ToolsScreenPieces/.
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
-  ShieldCheck, Sparkles, EyeOff, Wrench, Coins, Lock, CircleCheckBig, Receipt,
+  ShieldCheck, Sparkles, EyeOff, Wrench, Lock, CircleCheckBig, Star, Loader2,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { apiMore } from '@/lib/api-more'
 import { useAppStore } from '@/lib/store'
 import { formatDateTime } from '@/lib/format'
 import { TopBar } from '@/components/menrut/core/TopBar'
@@ -14,23 +19,76 @@ import { EmptyState } from '@/components/menrut/core/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { ToolDto, WalletTransactionDto } from '@/lib/types'
+import { ReservationsCard } from './ToolsScreenPieces/ReservationsCard'
+import type { ToolWithEligibilityDto } from '@/lib/types'
 
 export default function ToolsScreen() {
   const session = useAppStore((s) => s.session)
   const back = useAppStore((s) => s.back)
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
 
   const walletQ = useQuery({
     queryKey: ['courier-wallet'],
     queryFn: () => api.courierWallet(),
     enabled: !!session,
   })
-  const toolsQ = useQuery({ queryKey: ['tools'], queryFn: () => api.tools() })
-  const plansQ = useQuery({ queryKey: ['plans'], queryFn: () => api.plans() })
+  const toolsQ = useQuery({
+    queryKey: ['courier-tools'],
+    queryFn: () => apiMore.courierTools(),
+    enabled: !!session,
+  })
 
   const wallet = walletQ.data
-  const tools = toolsQ.data?.tools ?? []
-  const planes = plansQ.data?.plans ?? []
+  const data = toolsQ.data
+  const tools = data?.tools ?? []
+  const reservations = data?.reservations ?? []
+  const destacadoHasta = data?.highlightedUntil ?? null
+
+  const refrescar = () => {
+    void toolsQ.refetch()
+    void walletQ.refetch()
+  }
+
+  const reserveMut = useMutation({
+    mutationFn: (toolId: string) => apiMore.reserveTool(toolId),
+    onSuccess: () => {
+      toast.success('Herramienta reservada. Confírmala cuando la uses; si no, se libera sola en 24 h.')
+      refrescar()
+    },
+    onError: (e: Error) => toast.error(e.message || 'No se pudo reservar.'),
+  })
+
+  const confirmMut = useMutation({
+    mutationFn: (p: { toolId: string; reservationId: string }) => apiMore.confirmTool(p.toolId, p.reservationId),
+    onSuccess: (d) => {
+      if (d.effect.type === 'highlight') {
+        toast.success(`Perfil destacado ${d.effect.days ? `${d.effect.days} días` : ''}. Apareces primero en búsquedas.`)
+      } else if (d.effect.type === 'route-alert') {
+        toast.success(`Recorrido anunciado a ${d.effect.notified ?? 0} clientes con rutas coincidentes.`)
+      } else {
+        toast.success('Uso confirmado.')
+      }
+      refrescar()
+    },
+    onError: (e: Error) => toast.error(e.message || 'No se pudo confirmar.'),
+  })
+
+  const releaseMut = useMutation({
+    mutationFn: (p: { toolId: string; reservationId: string }) => apiMore.releaseTool(p.toolId, p.reservationId),
+    onSuccess: (d) => {
+      toast.success(`Crédito devuelto. Tienes ${d.toolCredits} créditos de herramientas.`)
+      refrescar()
+    },
+    onError: (e: Error) => toast.error(e.message || 'No se pudo liberar.'),
+  })
+
+  function accion(
+    p: { toolId: string; reservationId: string },
+    run: (vars: { toolId: string; reservationId: string }, opts: { onSettled: () => void }) => void,
+  ) {
+    setPendingAction(p.reservationId)
+    run(p, { onSettled: () => setPendingAction(null) })
+  }
 
   // ── Carga ─────────────────────────────────────────────────────────────
   if (walletQ.isLoading || toolsQ.isLoading) {
@@ -50,7 +108,7 @@ export default function ToolsScreen() {
   }
 
   // ── Error ─────────────────────────────────────────────────────────────
-  if (walletQ.isError || toolsQ.isError || !wallet || !toolsQ.data) {
+  if (walletQ.isError || toolsQ.isError || !wallet || !data) {
     return (
       <div>
         <TopBar title="Créditos y herramientas" subtitle="Tus dos carteras, separadas" onBack={back} />
@@ -60,43 +118,12 @@ export default function ToolsScreen() {
             title="No se pudo cargar esta sección"
             hint="Revisa tu conexión e inténtalo de nuevo."
             actionLabel="Reintentar"
-            onAction={() => {
-              void walletQ.refetch()
-              void toolsQ.refetch()
-              void plansQ.refetch()
-            }}
+            onAction={refrescar}
           />
         </div>
       </div>
     )
   }
-
-  // Niveles de plan (sortOrder) para comparar requisitos
-  const nivelPlanActual = wallet.hasActiveMembership
-    ? (planes.find((p) => p.name === wallet.planName)?.sortOrder ?? -1)
-    : -1
-
-  const estadoTool = (tool: ToolDto): { bloqueada: boolean; motivo: string } => {
-    if (!tool.isActive) return { bloqueada: true, motivo: 'No disponible temporalmente.' }
-    if (tool.requiresActiveMembership && !wallet.hasActiveMembership) {
-      return { bloqueada: true, motivo: tool.blockedMessage || 'Requiere una membresía activa.' }
-    }
-    if (tool.minPlanCode) {
-      const minPlan = planes.find((p) => p.code === tool.minPlanCode)
-      const nivelRequerido = minPlan?.sortOrder ?? -1
-      if (nivelPlanActual < nivelRequerido) {
-        return {
-          bloqueada: true,
-          motivo: tool.blockedMessage || `Requiere plan ${minPlan?.name ?? 'superior'} o superior.`,
-        }
-      }
-    }
-    return { bloqueada: false, motivo: '' }
-  }
-
-  const movimientosTools: WalletTransactionDto[] = [...wallet.transactions]
-    .filter((t) => t.walletType === 'tools')
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   return (
     <div>
@@ -123,7 +150,7 @@ export default function ToolsScreen() {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan/10 text-cyan">
               <Sparkles className="h-[18px] w-[18px]" aria-hidden />
             </span>
-            <p className="mt-2 font-display text-[26px] font-bold leading-none">{wallet.toolCredits}</p>
+            <p className="mt-2 font-display text-[26px] font-bold leading-none">{data.toolCredits}</p>
             <p className="mt-1 text-[11.5px] leading-tight text-muted-foreground">
               créditos de herramientas
             </p>
@@ -131,10 +158,23 @@ export default function ToolsScreen() {
           </article>
         </section>
 
-        <p className="mt-3 text-center text-[12px] text-muted-foreground">
-          Créditos disponibles: <strong className="text-foreground">{wallet.toolCredits}</strong> · Las dos
-          carteras son independientes y no se pueden mezclar.
-        </p>
+        {destacadoHasta && (
+          <p className="mt-3 flex items-center gap-2 rounded-2xl border border-orange/30 bg-orange/5 px-4 py-3 text-[12.5px] font-semibold text-orange">
+            <Star className="h-4 w-4 shrink-0" aria-hidden />
+            Perfil destacado hasta {formatDateTime(new Date(destacadoHasta).toISOString())}
+          </p>
+        )}
+
+        {/* Reservas activas + historial */}
+        <section className="mt-6" aria-labelledby="tools-reservas">
+          <h2 id="tools-reservas" className="section-title mb-2.5">Tus reservas</h2>
+          <ReservationsCard
+            reservations={reservations}
+            pendingAction={pendingAction}
+            onConfirm={(toolId, reservationId) => accion({ toolId, reservationId }, (vars, opts) => confirmMut.mutate(vars, opts))}
+            onRelease={(toolId, reservationId) => accion({ toolId, reservationId }, (vars, opts) => releaseMut.mutate(vars, opts))}
+          />
+        </section>
 
         {/* Catálogo de herramientas */}
         <section className="mt-6" aria-label="Herramientas disponibles">
@@ -149,112 +189,81 @@ export default function ToolsScreen() {
             </p>
           ) : (
             <div className="space-y-3">
-              {tools.map((tool) => {
-                const { bloqueada, motivo } = estadoTool(tool)
-                return (
-                  <article
-                    key={tool.id}
-                    aria-label={tool.name}
-                    className={cn(
-                      'rounded-2xl border bg-card p-4',
-                      bloqueada ? 'border-line opacity-90' : 'border-line',
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <ToolTag tag={tool.tag} />
-                        {bloqueada && <ToolTag tag="BLOQUEADA" blocked />}
-                      </div>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
-                          tool.creditCost > 0 ? 'bg-cyan/10 text-cyan' : 'bg-success/10 text-success',
-                        )}
-                      >
-                        {tool.creditCost > 0
-                          ? `${tool.creditCost} ${tool.creditCost === 1 ? 'crédito' : 'créditos'}`
-                          : 'GRATUITA'}
-                      </span>
-                    </div>
-
-                    <h3 className="mt-2 text-[14.5px] font-bold leading-tight">{tool.name}</h3>
-                    <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
-                      {tool.description}
-                    </p>
-
-                    {bloqueada ? (
-                      <p className="mt-2.5 flex items-start gap-1.5 rounded-xl bg-muted px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
-                        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                        {motivo}
-                      </p>
-                    ) : tool.creditCost === 0 ? (
-                      <p className="mt-2.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-success">
-                        <CircleCheckBig className="h-4 w-4" aria-hidden />
-                        Activa
-                      </p>
-                    ) : (
-                      <div className="mt-3">
-                        <Button variant="outline" className="h-10 rounded-full px-5" disabled>
-                          Activar
-                        </Button>
-                        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                          Activación disponible al confirmar los importes comerciales.
-                        </p>
-                      </div>
-                    )}
-                  </article>
-                )
-              })}
-            </div>
-          )}
-
-          <p className="mt-4 text-[11.5px] leading-relaxed text-muted-foreground">
-            Las herramientas bloqueadas indican qué plan las habilita.
-          </p>
-        </section>
-
-        {/* Movimientos de herramientas */}
-        <section className="mt-6" aria-label="Movimientos de herramientas">
-          <h2 className="section-title mb-2.5 flex items-center gap-1.5">
-            <Receipt className="h-4 w-4 text-muted-foreground" aria-hidden />
-            Movimientos de herramientas
-          </h2>
-          {movimientosTools.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-line bg-card px-4 py-8 text-center text-[13px] text-muted-foreground">
-              Todavía no hay movimientos en esta cartera.
-            </p>
-          ) : (
-            <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
-              {movimientosTools.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-cyan"
-                    aria-hidden
-                  >
-                    <Coins className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold leading-tight">{t.reason}</p>
-                    <p className="text-[11px] text-muted-foreground">{formatDateTime(t.createdAt)}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p
-                      className={cn(
-                        'text-[14px] font-bold leading-tight',
-                        t.delta >= 0 ? 'text-success' : 'text-danger',
-                      )}
-                    >
-                      {t.delta >= 0 ? '+' : '−'}
-                      {Math.abs(t.delta)}
-                    </p>
-                    <p className="text-[10.5px] text-muted-foreground">Saldo: {t.balanceAfter}</p>
-                  </div>
-                </div>
+              {tools.map((tool) => (
+                <ToolRow
+                  key={tool.id}
+                  tool={tool}
+                  credits={data.toolCredits}
+                  pending={reserveMut.isPending && reserveMut.variables === tool.id}
+                  onReserve={() => reserveMut.mutate(tool.id)}
+                />
               ))}
             </div>
           )}
         </section>
+
+        <p className="mt-5 text-center text-[11px] leading-relaxed text-muted-foreground">
+          Las reservas vencen a las 24 horas y el crédito vuelve solo a tu cartera. Las
+          dos carteras son independientes y no se pueden mezclar.
+        </p>
       </div>
     </div>
+  )
+}
+
+function ToolRow({
+  tool, credits, pending, onReserve,
+}: {
+  tool: ToolWithEligibilityDto
+  credits: number
+  pending: boolean
+  onReserve: () => void
+}) {
+  const elegible = tool.eligible && tool.creditCost > 0
+  const sinCreditos = elegible && credits < tool.creditCost
+  return (
+    <article aria-label={tool.name} className={cn('rounded-2xl border bg-card p-4', tool.eligible ? 'border-line' : 'border-line opacity-90')}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ToolTag tag={tool.tag} />
+          {!tool.eligible && <ToolTag tag="BLOQUEADA" blocked />}
+        </div>
+        <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold', tool.creditCost > 0 ? 'bg-cyan/10 text-cyan' : 'bg-success/10 text-success')}>
+          {tool.creditCost > 0 ? `${tool.creditCost} ${tool.creditCost === 1 ? 'crédito' : 'créditos'}` : 'GRATUITA'}
+        </span>
+      </div>
+
+      <h3 className="mt-2 text-[14.5px] font-bold leading-tight">{tool.name}</h3>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{tool.description}</p>
+
+      {!tool.eligible ? (
+        <p className="mt-2.5 flex items-start gap-1.5 rounded-xl bg-muted px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
+          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          {tool.blockedReason}
+        </p>
+      ) : tool.creditCost === 0 ? (
+        <p className="mt-2.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-success">
+          <CircleCheckBig className="h-4 w-4" aria-hidden />
+          Activa
+        </p>
+      ) : (
+        <div className="mt-3 flex items-center gap-3">
+          <Button
+            variant="outline"
+            className="h-10 rounded-full px-5 font-semibold"
+            disabled={pending || sinCreditos}
+            onClick={onReserve}
+          >
+            {pending && <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden />}
+            Reservar
+          </Button>
+          {sinCreditos && (
+            <span className="text-[11.5px] leading-tight text-muted-foreground">
+              Necesitas {tool.creditCost - credits} crédito(s) más.
+            </span>
+          )}
+        </div>
+      )}
+    </article>
   )
 }

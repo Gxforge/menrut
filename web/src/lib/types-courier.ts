@@ -37,6 +37,34 @@ export interface ToolDto {
   sortOrder: number
 }
 
+// Herramienta con elegibilidad calculada por el servidor (GET /courier/me/tools).
+export interface ToolWithEligibilityDto extends ToolDto {
+  eligible: boolean
+  blockedReason: string | null
+}
+
+// Reserva de herramienta: reserve → confirm | release (vencimiento libera solo).
+export interface ToolReservationDto {
+  id: string
+  toolId: string
+  toolCode: string
+  creditCost: number
+  status: 'reserved' | 'confirmed' | 'released' | 'expired'
+  note: string
+  createdAt: string
+  expiresAt: string
+  confirmedAt: string | null
+  releasedAt: string | null
+}
+
+export interface CourierToolsDto {
+  tools: ToolWithEligibilityDto[]
+  reservations: ToolReservationDto[]
+  toolCredits: number
+  highlightedUntil: number | null
+  autoReleased: number
+}
+
 export interface WalletDto {
   permanenceCredits: number
   toolCredits: number

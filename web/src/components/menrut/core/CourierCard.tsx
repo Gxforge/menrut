@@ -1,7 +1,7 @@
 // MENRUT — Tarjeta de mensajero (pasaporte resumido) para resultados
 'use client'
 
-import { Heart, MessageSquare, ArrowRight, Bike } from 'lucide-react'
+import { Heart, MessageSquare, ArrowRight, Bike, Star } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/lib/store'
@@ -20,7 +20,7 @@ export function CourierCard({ courier }: { courier: CourierSearchItem }) {
     <article
       className={cn(
         'rounded-2xl border border-line bg-card p-4 transition-shadow hover:shadow-[0_10px_30px_rgba(20,67,130,0.08)]',
-        courier.matchReasons.some((r) => r.toLowerCase().includes('destacado')) && 'ring-1 ring-orange/40'
+        (courier.isHighlighted || courier.matchReasons.some((r) => r.toLowerCase().includes('destacado'))) && 'ring-1 ring-orange/40'
       )}
     >
       <div className="flex items-start gap-3">
@@ -37,6 +37,12 @@ export function CourierCard({ courier }: { courier: CourierSearchItem }) {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="truncate font-display text-[15px] font-bold">{courier.fullName}</h3>
             {courier.isVerified && <VerifiedSeal compact />}
+            {courier.isHighlighted && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange/10 px-2 py-0.5 text-[10.5px] font-bold text-orange">
+                <Star className="h-3 w-3" aria-hidden />
+                Destacado
+              </span>
+            )}
             {courier.isDemo && (
               <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warn">
                 Demo

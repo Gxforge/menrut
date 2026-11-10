@@ -15,7 +15,9 @@ import type {
 // «cargando» para siempre si la red se cae a mitad de solicitud.
 const REQUEST_TIMEOUT_MS = 20_000
 
-async function req<T>(path: string, init?: RequestInit & { auth?: boolean }): Promise<T> {
+// Exportada para api-more.ts (nuevos dominios: entregas OTP, herramientas,
+// respuestas a reseñas y borrado de cuenta) sin superar el límite de líneas.
+export async function req<T>(path: string, init?: RequestInit & { auth?: boolean }): Promise<T> {
   const headers = new Headers(init?.headers)
   // La API v2 de producción exige Content-Type: application/json en TODOS los
   // POST/PATCH/PUT (aunque vayan sin cuerpo, p. ej. marcar notificación leída);
@@ -86,11 +88,12 @@ export const api = {
       body: JSON.stringify({ courierId }),
     }),
 
-  // Valorar/comentar a un mensajero (requiere sesión)
-  submitReview: (courierId: string, rating: number, comment: string) =>
+  // Valorar/comentar a un mensajero (requiere sesión). Si se pasa deliveryId
+  // de una entrega verificada por OTP, la opinión queda marcada «verificada».
+  submitReview: (courierId: string, rating: number, comment: string, deliveryId?: string) =>
     req<{ review: ReviewDto; ratingAvg: number; ratingCount: number }>(`/couriers/${courierId}/reviews`, {
       method: 'POST',
-      body: JSON.stringify({ rating, comment }),
+      body: JSON.stringify({ rating, comment, ...(deliveryId ? { deliveryId } : {}) }),
     }),
 
   savedRoutes: () => req<{ routes: SavedRouteDto[] }>('/saved-routes'),

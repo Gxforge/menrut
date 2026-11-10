@@ -20,6 +20,7 @@ import ChatScreen from '@/components/menrut/screens/public/ChatScreen'
 import NotificationsScreen from '@/components/menrut/screens/public/NotificationsScreen'
 import ClientProfileScreen from '@/components/menrut/screens/public/ClientProfileScreen'
 import BusinessProfileScreen from '@/components/menrut/screens/public/BusinessProfileScreen'
+import PrivacyScreen from '@/components/menrut/screens/public/PrivacyScreen'
 
 // Mensajero
 import CourierHomeScreen from '@/components/menrut/screens/courier/CourierHomeScreen'
@@ -29,6 +30,7 @@ import ReputationScreen from '@/components/menrut/screens/courier/ReputationScre
 import MembershipScreen from '@/components/menrut/screens/courier/MembershipScreen'
 import PlanOptionsScreen from '@/components/menrut/screens/courier/PlanOptionsScreen'
 import ToolsScreen from '@/components/menrut/screens/courier/ToolsScreen'
+import CourierDeliveriesScreen from '@/components/menrut/screens/courier/CourierDeliveriesScreen'
 import SettingsScreen from '@/components/menrut/screens/courier/SettingsScreen'
 
 // Administración
@@ -63,6 +65,7 @@ export function AppRouter() {
     case 'notifications': return <NotificationsScreen />
     case 'client-profile': return <ClientProfileScreen />
     case 'business-profile': return <BusinessProfileScreen />
+    case 'privacy': return <PrivacyScreen />
     // Mensajero
     case 'courier-home': return <CourierHomeScreen />
     case 'courier-routes': return <CourierRoutesScreen />
@@ -71,6 +74,7 @@ export function AppRouter() {
     case 'membership': return <MembershipScreen />
     case 'plan-options': return <PlanOptionsScreen />
     case 'tools': return <ToolsScreen />
+    case 'courier-deliveries': return <CourierDeliveriesScreen />
     case 'settings': return <SettingsScreen />
     // Administración
     case 'admin-home': return <AdminHomeScreen />

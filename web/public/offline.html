@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sin conexión · MENRUT</title>
+  <meta name="theme-color" content="#0b2b60" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, #071d43 0%, #0b2b60 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .card { max-width: 340px; }
+    .logo {
+      width: 84px; height: 84px; margin: 0 auto 20px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.08); border-radius: 22px;
+      font-size: 34px; font-weight: 800; letter-spacing: 1px;
+    }
+    h1 { font-size: 21px; margin-bottom: 10px; }
+    p { font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.75); margin-bottom: 22px; }
+    button {
+      appearance: none; border: 0; cursor: pointer;
+      background: #ffffff; color: #0b2b60;
+      font-size: 15px; font-weight: 700;
+      padding: 13px 34px; border-radius: 999px;
+    }
+    button:active { transform: scale(0.97); }
+    .foot { margin-top: 26px; font-size: 11px; letter-spacing: 0.12em; color: rgba(255,255,255,0.45); text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo" aria-hidden="true">MR</div>
+    <h1>Sin conexión</h1>
+    <p>
+      MENRUT necesita internet para buscar mensajeros y sincronizar tus datos.
+      Revisa tu conexión y vuelve a intentarlo.
+    </p>
+    <button type="button" onclick="location.replace('/')">Reintentar</button>
+    <p class="foot">MENRUT · Conectamos caminos.</p>
+  </main>
+</body>
+</html>

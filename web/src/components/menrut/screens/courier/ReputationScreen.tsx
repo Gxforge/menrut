@@ -7,6 +7,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { EyeOff } from 'lucide-react'
 import { api } from '@/lib/api'
+import { apiMore } from '@/lib/api-more'
 import { useAppStore } from '@/lib/store'
 import { TopBar } from '@/components/menrut/core/TopBar'
 import { EmptyState, CourierCardSkeleton } from '@/components/menrut/core/EmptyState'
@@ -46,6 +47,17 @@ export default function ReputationScreen() {
       setRazon('')
     },
     onError: (e: Error) => toast.error(e.message || 'No se pudo enviar el reporte.'),
+  })
+
+  // Responder (o editar la respuesta de) una opinión del pasaporte
+  const respondQ = useMutation({
+    mutationFn: (p: { id: string; response: string }) => apiMore.respondReview(p.id, p.response),
+    onSuccess: (data) => {
+      toast.success(data.review.response ? 'Respuesta publicada.' : 'Respuesta actualizada.')
+      setAbierta(data.review)
+      void revQ.refetch()
+    },
+    onError: (e: Error) => toast.error(e.message || 'No se pudo publicar la respuesta.'),
   })
 
   const dash = dashQ.data
@@ -130,11 +142,13 @@ export default function ReputationScreen() {
         </p>
       </div>
 
-      {/* Detalle de la opinión */}
+      {/* Detalle de la opinión (con respuesta pública del mensajero) */}
       <ReviewDetailSheet
         abierta={abierta}
         onClose={() => setAbierta(null)}
         onReport={() => setReportando(true)}
+        onRespond={(id, response) => respondQ.mutate({ id, response })}
+        respondPending={respondQ.isPending}
       />
 
       {/* Reportar abuso */}

@@ -12,6 +12,7 @@ import { Flag, Loader2, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TopBar } from '@/components/menrut/core/TopBar'
 import { api } from '@/lib/api'
+import { apiMore } from '@/lib/api-more'
 import { useAppStore } from '@/lib/store'
 import type { PassportDto } from '@/lib/types'
 import { PassportHeader } from './PassportScreenPieces/PassportHeader'
@@ -23,6 +24,8 @@ import { ReviewsSection } from './PassportScreenPieces/ReviewsSection'
 import { SaveButton } from './PassportScreenPieces/SaveButton'
 import { ReportDialog } from './PassportScreenPieces/ReportDialog'
 import { ReviewDialog } from './PassportScreenPieces/ReviewDialog'
+import { DeliveryCodeDialog } from './PassportScreenPieces/DeliveryCodeDialog'
+import { DeliveryCodeCard } from './PassportScreenPieces/DeliveryCodeCard'
 import { PassportSkeleton } from './PassportScreenPieces/PassportSkeleton'
 import { NoCourierState, PassportErrorState } from './PassportScreenPieces/EarlyStates'
 
@@ -40,6 +43,8 @@ export default function PassportScreen() {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewComment, setReviewComment] = useState('')
+  const [deliveryCodeOpen, setDeliveryCodeOpen] = useState(false)
+  const [reviewDeliveryId, setReviewDeliveryId] = useState<string | null>(null)
 
   const passportQuery = useQuery({
     queryKey: ['passport', selectedCourierId],
@@ -61,6 +66,20 @@ export default function PassportScreen() {
     staleTime: 60_000,
     retry: 1,
   })
+
+  // Entregas verificadas del cliente con ESTE mensajero: para enlazar la
+  // opinión con una entrega verificada por OTP (si existe, se marca).
+  const myDeliveriesQuery = useQuery({
+    queryKey: ['my-deliveries', selectedCourierId],
+    queryFn: () => apiMore.myDeliveries(),
+    enabled: !!session && reviewOpen,
+    staleTime: 30_000,
+    retry: 1,
+  })
+  const verifiedDeliveryId =
+    myDeliveriesQuery.data?.deliveries.find(
+      (d) => d.courierId === selectedCourierId && d.status === 'verified',
+    )?.id ?? null
 
   const contactMut = useMutation({
     mutationFn: (courierUserId: string) => api.startConversation(courierUserId),
@@ -88,13 +107,14 @@ export default function PassportScreen() {
   })
 
   const reviewMut = useMutation({
-    mutationFn: (input: { courierId: string; rating: number; comment: string }) =>
-      api.submitReview(input.courierId, input.rating, input.comment),
+    mutationFn: (input: { courierId: string; rating: number; comment: string; deliveryId?: string }) =>
+      api.submitReview(input.courierId, input.rating, input.comment, input.deliveryId),
     onSuccess: () => {
       toast.success('¡Gracias! Tu opinión se publicó.')
       setReviewOpen(false)
       setReviewRating(0)
       setReviewComment('')
+      setReviewDeliveryId(null)
       passportQuery.refetch()
     },
     onError: (err) => {
@@ -187,6 +207,12 @@ export default function PassportScreen() {
         {/* ── Rutas ─────────────────────────────────────────────────────────── */}
         <RoutesSection routes={p.routes} coverageType={p.coverageType} />
 
+        <DeliveryCodeCard
+          courierName={p.fullName}
+          onOpen={() => setDeliveryCodeOpen(true)}
+          visible={!!session && session.id !== p.userId}
+        />
+
         {/* ── Opiniones ─────────────────────────────────────────────────────── */}
         <ReviewsSection
           reviews={visibleReviews}
@@ -251,14 +277,22 @@ export default function PassportScreen() {
         onRatingChange={setReviewRating}
         comment={reviewComment}
         onCommentChange={setReviewComment}
+        canLinkDelivery={!!verifiedDeliveryId}
+        linkDelivery={!!verifiedDeliveryId && reviewDeliveryId === verifiedDeliveryId}
+        onLinkDeliveryChange={(v) => setReviewDeliveryId(v ? verifiedDeliveryId : null)}
         pending={reviewMut.isPending}
         onSubmit={() =>
-          reviewMut.mutate({
-            courierId: p.courierId,
-            rating: reviewRating,
-            comment: reviewComment.trim(),
-          })
+          reviewMut.mutate({ courierId: p.courierId, rating: reviewRating, comment: reviewComment.trim(), deliveryId: reviewDeliveryId ?? undefined })
         }
+      />
+
+      {/* ── Diálogo de código de entrega (OTP) ── */}
+      <DeliveryCodeDialog
+        open={deliveryCodeOpen}
+        onOpenChange={setDeliveryCodeOpen}
+        courierUserId={p.userId}
+        courierName={p.fullName}
+        onCreate={(cu) => apiMore.createDelivery(cu).then((d) => ({ code: d.code, expiresInSec: d.expiresInSec }))}
       />
     </div>
   )

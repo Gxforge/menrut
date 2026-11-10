@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
       notifications,
       auditEvents,
       demoShare,
+      reconciliation: null,
     }
     return NextResponse.json(dto)
   } catch (e) {

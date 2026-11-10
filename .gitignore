@@ -22,3 +22,4 @@ web/.env.local
 playwright-report/
 test-results/
 .seed/
+.cron-secret

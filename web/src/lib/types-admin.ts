@@ -72,6 +72,17 @@ export interface SystemStatusDto {
   notifications: number
   auditEvents: number
   demoShare: number
+  reconciliation: {
+    id: string
+    startedAt: string
+    finishedAt: string | null
+    pendingBefore: number
+    synced: number
+    reservationsReleased: number
+    orphansRepaired: number
+    ok: boolean
+    detail: string
+  } | null
 }
 
 // ─── Panel admin · Bases de datos en vivo (sondas reales por binding) ──────

@@ -16,3 +16,9 @@
 # Shell HTML: siempre revalidar.
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# Service Worker y página offline: siempre revalidar (nunca caché vieja).
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+/offline.html
+  Cache-Control: public, max-age=0, must-revalidate

@@ -8,6 +8,7 @@ import { useAppStore, ADMIN_SCREENS } from '@/lib/store'
 import { useSessionBootstrap } from '@/components/menrut/hooks'
 import { AppRouter } from './AppRouter'
 import { BottomNav } from './core/BottomNav'
+import { PwaSetup } from './core/PwaSetup'
 import type { Role, ScreenId } from '@/lib/types'
 
 // Pantallas navegables como visitante (funciones públicas): la app abre en
@@ -19,7 +20,7 @@ import type { Role, ScreenId } from '@/lib/types'
 const PUBLIC_SCREENS: ScreenId[] = [
   'splash', 'login', 'register', 'recovery',
   'home', 'filters', 'results', 'passport', 'map', 'client-profile',
-  'saved', 'inbox',
+  'saved', 'inbox', 'privacy',
 ]
 
 // Roles con acceso al panel de administración (jerarquía del backend:
@@ -76,6 +77,7 @@ export default function AppShell() {
           <AppRouter />
         </main>
         <BottomNav />
+        <PwaSetup />
       </div>
     </div>
   )
