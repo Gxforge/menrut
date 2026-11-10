@@ -1,6 +1,13 @@
 # MenRut — Estado actual
 
-10 de noviembre de 2026 (fase 2 **desplegada a producción**).
+10 de noviembre de 2026 — **EN PRODUCCIÓN REAL** (datos demo retirados, repo privado, personal = propietario).
+
+## Lanzamiento (10-nov, tarde)
+- **Datos demo retirados de las 10 bases** (`scripts/purge_demo.py --apply`, idempotente): 11 mensajeros demo + 8 clientes demo de global_accounts/user_roles/account_profiles/courier_shard_map/proyección, y sus perfiles, rutas, cobertura, servicios, carteras, ledger y reseñas de los 9 shards; además las 11 cuentas legacy `isDemo=1` con sus Route/Coverage/Service/Wallet/Notification. Respaldo completo ANTES de borrar en `backups/demo-backup-*.json` (ignorado por git; 345 filas). Auditoría, shard_registry y allocation_state intactos (histórico/infraestructura).
+- **Cuentas de autenticación depuradas**: `owner.test@test.local` (artefacto de prueba de la sesión anterior) eliminado de Supabase Auth. Quedan 3 cuentas reales: `nexolink.core1@gmail.com` (propietario), `studio.lexair@gmail.com` y `studiolexair@gmail.com` (registros reales).
+- **Personal de producción fijado al correo real del propietario**: `OWNER_EMAILS`=`ADMIN_EMAILS`=`MODERATOR_EMAILS`=`nexolink.core1@gmail.com` (secretos de Pages actualizados y **despliegue nuevo para que activen**). El propietario accede como PROPIETARIO entrando con su Gmail; primera vez: «Olvidé mi contraseña» (el SMTP propio ya entrega).
+- **Verificado en navegador real (producción vacía, sin demos)**: búsqueda 0 resultados sin error, rutas populares y mejores mensajeros con estados vacíos correctos («Todavía no hay rutas…», «Aún no hay mensajeros…»), registro de 3 roles renderiza, instalación PWA sigue ofrecida, cero errores de página/consola.
+- **Repo vuelto a PRIVADO** (Gxforge/menrut) tal como se acordó; CI corrió verde mientras fue público.
 
 ## Implementado y probado (hoy, contra producción y local)
 
