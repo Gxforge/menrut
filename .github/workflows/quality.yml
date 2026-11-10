@@ -42,5 +42,13 @@ jobs:
       - name: Comprobaciones HTTP
         run: |
           npx wrangler pages dev web/out --ip 127.0.0.1 --port 8788 > /tmp/menrut-pages.log 2>&1 &
-          npx wait-on http://127.0.0.1:8788/api/v1/health --timeout 60000
+          for i in $(seq 1 90); do
+            curl -sf http://127.0.0.1:8788/api/v1/health > /dev/null 2>&1 && break
+            sleep 2
+          done
+          if ! curl -sf http://127.0.0.1:8788/api/v1/health > /dev/null 2>&1; then
+            echo "== El servidor local no respondió; log de pages dev =="
+            cat /tmp/menrut-pages.log || true
+            exit 1
+          fi
           python3 tests/http_test.py
