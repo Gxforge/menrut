@@ -23,6 +23,7 @@
 - **SMTP propio verificado en producción**: confirmado por API de gestión (smtp.gmail.com:587 del propietario, confirmación de correo activa, plantillas con marca). **Prueba real de envío ejecutada** (`/auth/v1/recover` → HTTP 200; el limitador 429 confirmó la entrega anterior): el correo de recuperación salió por el SMTP del propietario a nexolink.core1@gmail.com — **falta que el propietario confirme la recepción en su bandeja**.
 
 ### Verificación de hoy
+- **CI «Calidad» VERDE en GitHub Actions** (repo público → runner disponible): typecheck, 24 pruebas, regla 300 líneas, build estático, migraciones locales a las 10 bases y comprobaciones HTTP contra Pages Functions locales.
 - 17 pruebas TS + 7 SQLite (nuevas: ciclo de vida de reservas —sin doble cargo, reintento y devolución única—, restricciones del OTP y vistas del catálogo consolidado). Typecheck raíz + web limpios. **Ningún archivo supera 300 líneas.** Build estático completo con sw.js/offline.html.
 - Local con Pages Functions reales: territorios (v2) y locations (v1, ya sobre las vistas) correctos; cron con secreto correcto/incorrecto; endpoints nuevos exigen sesión; reconciliación auto y cron registradas.
 
