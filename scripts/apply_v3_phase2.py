@@ -68,6 +68,18 @@ def column_exists(db, table, column):
     return any(c["name"] == column for c in rows[0]["results"])
 
 
+def apply_core_dedup():
+    """0007: elimina provincias/municipios v1-espejo duplicados (sin gemelo v2 no se toca)."""
+    dup = scalar(CORE, "SELECT count(*) AS n FROM Province WHERE code LIKE 'v1-%' AND EXISTS(SELECT 1 FROM Province p2 WHERE p2.name=Province.name AND p2.code NOT LIKE 'v1-%')")
+    if dup and dup["n"] > 0:
+        n_m = scalar(CORE, "SELECT count(*) AS n FROM Municipality WHERE provinceId IN (SELECT id FROM Province WHERE code LIKE 'v1-%' AND EXISTS(SELECT 1 FROM Province p2 WHERE p2.name=Province.name AND p2.code NOT LIKE 'v1-%'))")["n"]
+        query(CORE, "DELETE FROM Municipality WHERE provinceId IN (SELECT id FROM Province WHERE code LIKE 'v1-%' AND EXISTS(SELECT 1 FROM Province p2 WHERE p2.name=Province.name AND p2.code NOT LIKE 'v1-%'))")
+        query(CORE, "DELETE FROM Province WHERE code LIKE 'v1-%' AND EXISTS(SELECT 1 FROM Province p2 WHERE p2.name=Province.name AND p2.code NOT LIKE 'v1-%')")
+        print(f"  0007 dedup: {dup['n']} provincias y {n_m} municipios v1-espejo eliminados")
+    else:
+        print("  0007 dedup: sin duplicados")
+
+
 def apply_core():
     print("── menrut-core 0006 ──")
     geo = type_of(CORE, "geographic_provinces")
@@ -121,6 +133,7 @@ def apply_shard(sid, uuid):
 
 if __name__ == "__main__":
     apply_core()
+    apply_core_dedup()
     for sid, uuid in sorted(SHARDS.items()):
         apply_shard(sid, uuid)
     print("\nLISTO: 10 bases en modelo v3 fase 2 (catálogo único, reservas, OTP y reconciliación).")

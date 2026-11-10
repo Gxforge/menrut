@@ -1,6 +1,6 @@
 # MenRut — Estado actual
 
-10 de noviembre de 2026 (fase 2 completada en local). **Entrega parcial: el código de las fases está terminado y verificado localmente; falta desplegar (token de Cloudflare vencido, ver «Bloqueos»).**
+10 de noviembre de 2026 (fase 2 **desplegada a producción**).
 
 ## Implementado y probado (hoy, contra producción y local)
 
@@ -28,14 +28,15 @@
 - Local con Pages Functions reales: territorios (v2) y locations (v1, ya sobre las vistas) correctos; cron con secreto correcto/incorrecto; endpoints nuevos exigen sesión; reconciliación auto y cron registradas.
 
 ## Conectado, con bloqueo externo
-- **Cloudflare: el token de la cuenta venció/revocó ~15:40 UTC del 10-nov** (el despliegue de las 15:32 fue el último en funcionar; verificación posterior: 401/9109). Mientras no haya token nuevo NO se pueden aplicar las migraciones a las 10 bases de producción ni desplegar Pages. Todo está listo: `bash scripts/deploy_production.sh` (migraciones idempotentes + build + deploy) con `CLOUDFLARE_API_TOKEN` en el entorno. Opcional: `bash scripts/deploy_reconciler.sh` (cron externo + secreto CRON_SECRET en Pages).
+- **Despliegue de fase 2 COMPLETO (10-nov, ~18:10 UTC)**: migraciones 0006+0005+**0007 (dedup)** a las 10 bases, build y `pages deploy`, worker `menrut-reconciler` con cron `17 */6 * * *` y secreto compartido `CRON_SECRET` (worker + Pages). Verificado en vivo: catálogo 16/168 sin duplicados, `/api/v2/cron/reconcile` con secreto correcto → `{"ok":true}` (bitácora `cron:` + `auto:` en `reconciliation_runs`), búsqueda pública sobre la proyección, rutas nuevas de herramientas/OTP/respuestas/borrado responden 401 sin sesión, `sw.js` fase 2 (md5 idéntico al repo) y `/offline` servidos.
+- **Corrección post-despliegue**: la absorción de 0006 duplicó el catálogo (32 provincias/336 municipios) porque los ids v1 (slugs) diferían de los v2 (cuids) y `INSERT OR IGNORE` nunca chocaban. Migración **0007** (idempotente, sin gemelo v2 no se toca) eliminó los 16+168 espejos v1 tras verificar CERO referencias (rutas CORE, cobertura de los 9 shards y proyección usan solo ids v2). La API v1 de compatibilidad funciona contra las vistas.
 - **Repo público** (decisión del propietario para minutos ilimitados de GitHub Actions); volver a privado cuando esté en producción.
 
 ## Pendiente
-- **Desplegar la fase 2** (requiere token de Cloudflare nuevo): migraciones 0006 (core) + 0005 (9 shards) + build + pages deploy.
 - **Confirmar recepción del correo** de recuperación en la bandeja del propietario (envío verificado HTTP 200).
 - Retirar/etiquetar los 11 mensajeros demo antes de lanzar reales (insignia «demostración» ya visible).
 - Recuperación ensayada de shards (backup/restore documentado y probado en frío).
+- Volver el repo a privado al pasar a producción real (decisión del propietario).
 
 ## Decisiones documentadas
 - Catálogo de planes: `MembershipPlan` (CORE) es LA fuente; `plans` de v1 sin uso.
