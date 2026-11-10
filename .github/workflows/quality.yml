@@ -8,14 +8,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
       # Backend (Pages Functions + módulos v1/v2) y pruebas de base de datos.
       - run: npm ci
       - run: npm run typecheck --ignore-scripts || npx tsc --noEmit
       - run: npm test
       - run: npm run quality
+      # Bun por script oficial (la política del repo solo permite actions/*).
+      - name: Instalar Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
       # Web (Next.js 16): dependencias, cliente Prisma y typecheck.
       - working-directory: web
         run: bun install --frozen-lockfile
