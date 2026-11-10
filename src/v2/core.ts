@@ -1,18 +1,32 @@
 // MENRUT v2 — Núcleo del backend operativo (Cloudflare Pages Functions + D1).
-// Verifica JWT de Supabase por JWKS (ES256/RS256), resuelve el User operativo,
-// aplica jerarquía de roles, rate limiting por bucket D1 y auditoría.
+// Verifica JWT de Supabase por JWKS (ES256/RS256), aplica jerarquía de roles,
+// rate limiting por bucket D1, auditoría y acceso a Supabase Storage.
+// v3: el entorno expone los 10 bindings D1 (CORE + 9 shards); la identidad
+// operativa es global (global_accounts) y los datos del mensajero viven en su
+// shard dueño (ver identity.ts y shard.ts).
 import { createRemoteJWKSet } from 'jose';
 import { verifyIdentity } from '../core/tokens';
 
 // ─── Entorno v2 ─────────────────────────────────────────────────────────────
 export interface V2Env {
   D1_CORE: D1Database;
+  D1_SHARD_01: D1Database;
+  D1_SHARD_02: D1Database;
+  D1_SHARD_03: D1Database;
+  D1_SHARD_04: D1Database;
+  D1_SHARD_05: D1Database;
+  D1_SHARD_06: D1Database;
+  D1_SHARD_07: D1Database;
+  D1_SHARD_08: D1Database;
+  D1_SHARD_09: D1Database;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   ALLOWED_ORIGIN: string;
   OWNER_EMAILS: string;
   ADMIN_EMAILS: string;
   MODERATOR_EMAILS: string;
+  TRIAL_HMAC_SECRET: string;
+  [key: `D1_SHARD_${string}`]: D1Database | undefined;
 }
 
 // ─── Errores HTTP ───────────────────────────────────────────────────────────
@@ -92,49 +106,16 @@ export function roleRank(role: string): number {
   }
 }
 
-export function requireRole(user: DbUser, minRole: StaffRole): void {
-  if (roleRank(user.role) < roleRank(minRole)) {
+export function requireRole(role: string, minRole: StaffRole): void {
+  if (roleRank(role) < roleRank(minRole)) {
     throw new HttpError(403, 'No tienes permisos para realizar esta acción.');
   }
 }
 
-export function requireExactRole(user: DbUser, role: string): void {
-  if (user.role !== role) {
+export function requireExactRole(role: string, expected: string): void {
+  if (role !== expected) {
     throw new HttpError(403, 'No tienes permisos para realizar esta acción.');
   }
-}
-
-// ─── Usuario operativo (fila de la tabla User) ──────────────────────────────
-export interface DbUser {
-  id: string;
-  email: string;
-  supabaseUserId: string | null;
-  role: string;
-  fullName: string;
-  phone: string | null;
-  avatarUrl: string | null;
-  status: string;
-  hasUsedTrial: number;
-  isDemo: number;
-  createdAt: number;
-  updatedAt: number;
-}
-
-function rowToUser(r: Record<string, unknown>): DbUser {
-  return {
-    id: r.id as string,
-    email: r.email as string,
-    supabaseUserId: (r.supabaseUserId as string | null) ?? null,
-    role: r.role as string,
-    fullName: r.fullName as string,
-    phone: (r.phone as string | null) ?? null,
-    avatarUrl: (r.avatarUrl as string | null) ?? null,
-    status: r.status as string,
-    hasUsedTrial: (r.hasUsedTrial as number) ?? 0,
-    isDemo: (r.isDemo as number) ?? 0,
-    createdAt: r.createdAt as number,
-    updatedAt: r.updatedAt as number,
-  };
 }
 
 // ─── Verificación de JWT (Supabase JWKS) ────────────────────────────────────
@@ -164,7 +145,8 @@ export async function verifySupabaseToken(request: Request, env: V2Env): Promise
     const fullName =
       typeof meta.full_name === 'string' && meta.full_name.trim() ? meta.full_name.trim() : null;
     // Rol elegido al registrarse (client/courier/business), firmado por Supabase
-    // dentro del JWT verificado: respaldo para sync cuando el body no lo trae.
+    // dentro del JWT ya verificado. El staff NUNCA sale de metadatos de usuario:
+    // solo de las listas de correos privadas del entorno.
     const accountRole =
       typeof meta.account_role === 'string' && meta.account_role.trim() ? meta.account_role.trim() : null;
     return {
@@ -176,45 +158,6 @@ export async function verifySupabaseToken(request: Request, env: V2Env): Promise
   } catch {
     return null;
   }
-}
-
-export interface AuthContext {
-  user: DbUser;
-  token: string;
-  supabaseUserId: string;
-  supabaseEmail: string | null;
-}
-
-export async function requireAuth(request: Request, env: V2Env): Promise<AuthContext> {
-  const identity = await verifySupabaseToken(request, env);
-  if (!identity) throw new HttpError(401, 'Sesión no válida. Inicia sesión de nuevo.');
-  const user = await findUserByIdentity(env, identity);
-  if (!user || user.status !== 'active') throw new HttpError(401, 'Sesión no válida. Inicia sesión de nuevo.');
-  const header = request.headers.get('authorization') ?? '';
-  return {
-    user,
-    token: header.slice(7).trim(),
-    supabaseUserId: identity.sub,
-    supabaseEmail: identity.email,
-  };
-}
-
-/** Busca el User operativo por supabaseUserId o email (mismo orden que sync). */
-export async function findUserByIdentity(env: V2Env, identity: SupabaseIdentity): Promise<DbUser | null> {
-  const db = env.D1_CORE;
-  const bySub = await db
-    .prepare('SELECT * FROM User WHERE supabaseUserId=? LIMIT 1')
-    .bind(identity.sub)
-    .first();
-  if (bySub) return rowToUser(bySub);
-  if (identity.email) {
-    const byEmail = await db
-      .prepare('SELECT * FROM User WHERE email=? LIMIT 1')
-      .bind(identity.email)
-      .first();
-    if (byEmail) return rowToUser(byEmail);
-  }
-  return null;
 }
 
 // ─── Rate limiting (bucket D1 atómico) ──────────────────────────────────────
@@ -251,9 +194,9 @@ export async function audit(
   detail: string,
 ): Promise<void> {
   await env.D1_CORE.prepare(
-    'INSERT INTO AuditLog(id,actorId,action,entityType,entityId,detail,createdAt) VALUES(?,?,?,?,?,?,?)'
+    'INSERT INTO audit_events(id,actor_id,action,entity_type,entity_id,detail,created_at) VALUES(?,?,?,?,?,?,?)'
   )
-    .bind(newId(), actorId, action, entityType, entityId, detail, nowMs())
+    .bind(newId(), actorId, action, entityType, entityId, detail, Math.floor(nowMs() / 1000))
     .run();
 }
 

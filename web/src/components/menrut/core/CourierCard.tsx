@@ -37,6 +37,11 @@ export function CourierCard({ courier }: { courier: CourierSearchItem }) {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="truncate font-display text-[15px] font-bold">{courier.fullName}</h3>
             {courier.isVerified && <VerifiedSeal compact />}
+            {courier.isDemo && (
+              <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warn">
+                Demo
+              </span>
+            )}
             <CoverageBadge type={courier.coverageType} />
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

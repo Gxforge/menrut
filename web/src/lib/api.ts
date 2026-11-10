@@ -8,6 +8,7 @@ import type {
   CourierDashboardDto, RouteDto, ReviewDto, AdminOverviewDto, AdminCourierDto,
   AdminPaymentDto, AdminAccountDto, AuditLogDto, ReportFlagDto, SystemStatusDto,
   SessionUser, PaymentProofDto, RequestPlanResponseDto, DecidePaymentPayload,
+  DatabasesStatusDto,
 } from './types'
 
 // Tiempo máximo de espera por petición: ninguna pantalla puede quedarse
@@ -83,6 +84,13 @@ export const api = {
     req<{ favorite: boolean }>('/favorites', {
       method: 'POST',
       body: JSON.stringify({ courierId }),
+    }),
+
+  // Valorar/comentar a un mensajero (requiere sesión)
+  submitReview: (courierId: string, rating: number, comment: string) =>
+    req<{ review: ReviewDto; ratingAvg: number; ratingCount: number }>(`/couriers/${courierId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, comment }),
     }),
 
   savedRoutes: () => req<{ routes: SavedRouteDto[] }>('/saved-routes'),
@@ -230,6 +238,7 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
   adminSystem: () => req<SystemStatusDto>('/admin/system'),
+  adminDatabases: () => req<DatabasesStatusDto>('/admin/databases'),
   adminConfig: () =>
     req<{ config: Record<string, string> }>('/admin/config'),
   adminSaveConfig: (config: Record<string, string>) =>

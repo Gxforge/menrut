@@ -1,7 +1,9 @@
 // MENRUT v2 — Mapeadores de DTOs (contrato del frontend, ver web/src/lib/types.ts).
-import { iso, type DbUser } from './core';
+// v3: las rutas viven en el shard; el SELECT usa alias para mantener RouteRow.
+import { iso } from './core';
+import type { ShardWallet } from './wallet';
 
-// ─── Rutas (con nombres de territorio ya resueltos por SQL) ─────────────────
+// ─── Rutas (nombres de territorio resueltos contra el catálogo de CORE) ─────
 export interface RouteRow {
   id: string;
   courierId: string;
@@ -27,15 +29,13 @@ export interface RouteRow {
   destProvName: string | null;
 }
 
-export const ROUTE_SELECT = `SELECT r.id, r.courierId, r.originMunicipalityId, r.destinationMunicipalityId,
- r.originProvinceId, r.destinationProvinceId, r.scope, r.stops, r.frequency, r.daysNote,
- r.serviceType, r.vehicleType, r.feeCup, r.status, r.nextDepartureAt, r.notes, r.isDemo, r.createdAt,
- om.name AS originMunName, dm.name AS destMunName, op.name AS originProvName, dp.name AS destProvName
- FROM Route r
- LEFT JOIN Municipality om ON om.id = r.originMunicipalityId
- LEFT JOIN Municipality dm ON dm.id = r.destinationMunicipalityId
- LEFT JOIN Province op ON op.id = r.originProvinceId
- LEFT JOIN Province dp ON dp.id = r.destinationProvinceId`;
+export const SHARD_ROUTE_SELECT = `SELECT r.id, r.user_id AS courierId,
+ r.origin_id AS originMunicipalityId, r.destination_id AS destinationMunicipalityId,
+ r.origin_province_id AS originProvinceId, r.destination_province_id AS destinationProvinceId,
+ r.scope, r.stops, r.frequency, r.days_note AS daysNote, r.service_type AS serviceType,
+ r.vehicle_type AS vehicleType, r.fee_cup AS feeCup, r.status,
+ r.next_departure_at AS nextDepartureAt, r.notes, r.is_demo AS isDemo, r.created_at AS createdAt
+ FROM courier_routes r`;
 
 export function toRouteDto(
   r: RouteRow,
@@ -66,7 +66,14 @@ export function toRouteDto(
 }
 
 // ─── Usuario de sesión ──────────────────────────────────────────────────────
-export function toSessionUser(u: DbUser): Record<string, unknown> {
+export function toSessionUser(u: {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  avatarUrl: string | null;
+  phone: string | null;
+}): Record<string, unknown> {
   return {
     id: u.id,
     email: u.email,
@@ -198,49 +205,10 @@ export function toNotificationDto(n: {
   };
 }
 
-// ─── Carteras ───────────────────────────────────────────────────────────────
-export interface WalletRow {
-  id: string;
-  courierId: string;
-  permanenceCredits: number;
-  toolCredits: number;
-  lastConsumedAt: number | null;
-}
-
-export interface MembershipWithPlanRow {
-  id: string;
-  courierId: string;
-  planId: string;
-  startedAt: number;
-  expiresAt: number;
-  status: string;
-  planName: string;
-  planCode: string;
-}
-
-export function toWalletTransactionDto(t: {
-  id: string;
-  walletType: string;
-  reason: string;
-  reference: string | null;
-  delta: number;
-  balanceAfter: number;
-  createdAt: number;
-}): Record<string, unknown> {
-  return {
-    id: t.id,
-    walletType: t.walletType,
-    reason: t.reason,
-    reference: t.reference,
-    delta: t.delta,
-    balanceAfter: t.balanceAfter,
-    createdAt: iso(t.createdAt),
-  };
-}
-
+// ─── Carteras (permanencia en segundos → créditos legibles) ─────────────────
 export function toWalletDto(
-  wallet: WalletRow | null,
-  membership: MembershipWithPlanRow | null,
+  wallet: ShardWallet | null,
+  membership: { planName: string; expiresAtMs: number } | null,
   isPublic: boolean,
   transactions: Array<{
     id: string;
@@ -252,19 +220,21 @@ export function toWalletDto(
     createdAt: number;
   }>,
 ): Record<string, unknown> {
+  const remainingSeconds = wallet?.permanence_seconds ?? 0;
   return {
-    permanenceCredits: wallet?.permanenceCredits ?? 0,
-    toolCredits: wallet?.toolCredits ?? 0,
-    permanenceDaysLeft: Math.floor((wallet?.permanenceCredits ?? 0) / 10),
+    permanenceCredits: Math.round(remainingSeconds / 8640),
+    toolCredits: wallet?.tool_credits ?? 0,
+    permanenceSeconds: remainingSeconds,
+    permanenceDaysLeft: Math.floor(remainingSeconds / 86400),
     hasActiveMembership: !!membership,
     planName: membership?.planName ?? null,
-    planExpiresAt: membership ? iso(membership.expiresAt) : null,
+    planExpiresAt: membership ? iso(membership.expiresAtMs) : null,
     isPublic,
-    transactions: transactions.map(toWalletTransactionDto),
+    transactions,
   };
 }
 
-// ─── Comprobantes de pago ───────────────────────────────────────────────────
+// ─── Comprobantes de pago (payment_proofs) ──────────────────────────────────
 export interface PaymentProofRow {
   id: string;
   courierId: string;
@@ -284,21 +254,12 @@ export interface PaymentProofRow {
   planCode: string | null;
 }
 
-export const PAYMENT_PROOF_SELECT = `SELECT pp.id, pp.courierId, pp.submittedBy, pp.planId, pp.amountCup,
- pp.confirmedAmountCup, pp.method, pp.reference, pp.proofUrl, pp.status, pp.reviewNote,
- pp.reviewedBy, pp.reviewedAt, pp.createdAt, mp.name AS planName, mp.code AS planCode
- FROM PaymentProof pp LEFT JOIN MembershipPlan mp ON mp.id = pp.planId`;
-
-/** Variante admin: añade datos del mensajero (usuario, nombre, correo, visibilidad). */
-export const ADMIN_PAYMENT_PROOF_SELECT = `SELECT pp.id, pp.courierId, pp.submittedBy, pp.planId, pp.amountCup,
- pp.confirmedAmountCup, pp.method, pp.reference, pp.proofUrl, pp.status, pp.reviewNote,
- pp.reviewedBy, pp.reviewedAt, pp.createdAt, mp.name AS planName, mp.code AS planCode,
- cp.userId AS courierUserId, cp.isPublic AS courierIsPublic,
- cu.fullName AS courierName, cu.email AS courierEmail
- FROM PaymentProof pp
- LEFT JOIN MembershipPlan mp ON mp.id = pp.planId
- JOIN CourierProfile cp ON cp.id = pp.courierId
- JOIN User cu ON cu.id = cp.userId`;
+export const PAYMENT_PROOF_SELECT = `SELECT pp.id, pp.courier_id AS courierId, pp.submitted_by AS submittedBy,
+ pp.plan_id AS planId, pp.amount_cup AS amountCup, pp.confirmed_amount_cup AS confirmedAmountCup,
+ pp.method, pp.reference, pp.proof_url AS proofUrl, pp.status, pp.review_note AS reviewNote,
+ pp.reviewed_by AS reviewedBy, pp.reviewed_at AS reviewedAt, pp.created_at AS createdAt,
+ mp.name AS planName, mp.code AS planCode
+ FROM payment_proofs pp LEFT JOIN MembershipPlan mp ON mp.id = pp.plan_id`;
 
 export function toPaymentProofDto(p: PaymentProofRow): Record<string, unknown> {
   return {
@@ -314,7 +275,7 @@ export function toPaymentProofDto(p: PaymentProofRow): Record<string, unknown> {
     hasProof: !!p.proofUrl,
     status: p.status,
     reviewNote: p.reviewNote,
-    reviewedAt: iso(p.reviewedAt),
-    createdAt: iso(p.createdAt),
+    reviewedAt: iso(p.reviewedAt ? p.reviewedAt * 1000 : null),
+    createdAt: iso(p.createdAt * 1000),
   };
 }

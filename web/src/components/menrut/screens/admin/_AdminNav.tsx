@@ -26,6 +26,7 @@ const ADMIN_TABS: { screen: ScreenId; label: string }[] = [
   { screen: 'admin-tools', label: 'Planes/Herram.' },
   { screen: 'admin-moderation', label: 'Moderación' },
   { screen: 'admin-settings', label: 'Config' },
+  { screen: 'admin-databases', label: 'Base de datos' },
   { screen: 'admin-system', label: 'Sistema' },
 ]
 

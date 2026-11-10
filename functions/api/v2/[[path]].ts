@@ -63,6 +63,9 @@ export const onRequest: PagesFunction<V2Env> = async ({ request, env }) => {
     const result = await route(apiRequest, env, url);
     return new Response(JSON.stringify(result.json), { headers: { ...headers, ...(result.headers ?? {}) } });
   } catch (error) {
+    if (!(error instanceof HttpError)) {
+      console.error('[v2] Error interno:', error instanceof Error ? error.stack : error);
+    }
     const e =
       error instanceof HttpError
         ? error

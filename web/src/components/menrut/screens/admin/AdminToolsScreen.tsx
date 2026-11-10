@@ -4,51 +4,19 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Wrench, Ticket, Loader2, Info } from 'lucide-react'
+import { Wrench, Ticket, Info } from 'lucide-react'
 import { api } from '@/lib/api'
-import { formatCup } from '@/lib/format'
 import { AdminScreen } from '@/components/menrut/screens/admin/_AdminNav'
-import { ToolTag } from '@/components/menrut/core/StatusBadge'
 import { EmptyState } from '@/components/menrut/core/EmptyState'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PlanCard } from '@/components/menrut/screens/admin/AdminToolsPieces/PlanCard'
+import { ToolCard } from '@/components/menrut/screens/admin/AdminToolsPieces/ToolCard'
+import { PlanEditDialog } from '@/components/menrut/screens/admin/AdminToolsPieces/PlanEditDialog'
+import { ToolEditDialog } from '@/components/menrut/screens/admin/AdminToolsPieces/ToolEditDialog'
+import {
+  PlanFormState, ToolFormState, isNonNegative,
+} from '@/components/menrut/screens/admin/AdminToolsPieces/formState'
 import type { PlanDto, ToolDto } from '@/lib/types'
-
-// ─── Formularios ─────────────────────────────────────────────────────────────
-
-interface PlanFormState {
-  name: string
-  description: string
-  durationDays: string
-  priceCup: string
-  permanenceCredits: string
-  toolCredits: string
-  isActive: boolean
-}
-
-interface ToolFormState {
-  name: string
-  description: string
-  tag: string
-  minPlanCode: string | null
-  creditCost: string
-  requiresActiveMembership: boolean
-  isActive: boolean
-  blockedMessage: string
-}
-
-const isNonNegative = (s: string) => {
-  const n = Number(s)
-  return Number.isFinite(n) && n >= 0
-}
-
-// ─── Pantalla ────────────────────────────────────────────────────────────────
 
 export default function AdminToolsScreen() {
   const qc = useQueryClient()
@@ -156,8 +124,15 @@ export default function AdminToolsScreen() {
     })
   }
 
-  const minPlanLabel = (code: string | null) =>
-    code ? (plans.find((p) => p.code === code)?.name ?? code) : 'Ninguno (créditos)'
+  const closePlanDialog = () => {
+    setPlanEditing(null)
+    setPlanForm(null)
+  }
+
+  const closeToolDialog = () => {
+    setToolEditing(null)
+    setToolForm(null)
+  }
 
   return (
     <AdminScreen
@@ -201,66 +176,13 @@ export default function AdminToolsScreen() {
             />
           ) : (
             plans.map((p) => (
-              <article key={p.id} className="rounded-2xl border border-line bg-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <h3 className="font-display text-[14.5px] font-bold leading-tight">{p.name}</h3>
-                      {p.isProposal ? (
-                        <span className="rounded-full bg-orange/10 px-2 py-0.5 text-[10px] font-bold text-orange">
-                          Importe por confirmar
-                        </span>
-                      ) : null}
-                      {p.isTrial ? (
-                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">
-                          Prueba
-                        </span>
-                      ) : null}
-                      {!p.isActive ? (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                          Inactivo
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">Código {p.code}</p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Switch
-                      checked={p.isActive}
-                      disabled={savePlan.isPending}
-                      onCheckedChange={(v) => savePlan.mutate({ ...p, isActive: v })}
-                      aria-label={`Activar o desactivar el plan ${p.name}`}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => openPlanEdit(p)}
-                    >
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-secondary/50 p-2.5 text-[11px]">
-                  <div>
-                    <p className="font-display text-[14px] font-bold leading-none">{p.durationDays} días</p>
-                    <p className="mt-1 leading-tight text-muted-foreground">Duración</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-[14px] font-bold leading-none">{formatCup(p.priceCup)}</p>
-                    <p className="mt-1 leading-tight text-muted-foreground">Precio</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-[14px] font-bold leading-none">{p.permanenceCredits}</p>
-                    <p className="mt-1 leading-tight text-muted-foreground">Créditos permanencia</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-[14px] font-bold leading-none">{p.toolCredits}</p>
-                    <p className="mt-1 leading-tight text-muted-foreground">Créditos herramientas</p>
-                  </div>
-                </div>
-              </article>
+              <PlanCard
+                key={p.id}
+                plan={p}
+                saving={savePlan.isPending}
+                onEdit={openPlanEdit}
+                onToggleActive={(plan, v) => savePlan.mutate({ ...plan, isActive: v })}
+              />
             ))
           )}
         </div>
@@ -295,281 +217,41 @@ export default function AdminToolsScreen() {
             />
           ) : (
             tools.map((t) => (
-              <article key={t.id} className="rounded-2xl border border-line bg-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <h3 className="font-display text-[14.5px] font-bold leading-tight">{t.name}</h3>
-                      <ToolTag tag={t.tag} />
-                      {!t.isActive ? (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                          Inactiva
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                      Código {t.code} · {t.creditCost} créditos por uso
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Switch
-                      checked={t.isActive}
-                      disabled={saveTool.isPending}
-                      onCheckedChange={(v) => saveTool.mutate({ ...t, isActive: v })}
-                      aria-label={`Activar o desactivar la herramienta ${t.name}`}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => openToolEdit(t)}
-                    >
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold text-navy">
-                    Plan mínimo: {minPlanLabel(t.minPlanCode)}
-                  </span>
-                  {t.requiresActiveMembership ? (
-                    <span className="inline-flex items-center rounded-full bg-orange/10 px-2.5 py-1 text-[10.5px] font-semibold text-orange">
-                      Requiere membresía activa
-                    </span>
-                  ) : null}
-                </div>
-
-                {t.blockedMessage ? (
-                  <p className="mt-2 rounded-xl bg-muted/60 px-3 py-2 text-[11.5px] leading-relaxed text-muted-foreground">
-                    Mensaje de bloqueo: «{t.blockedMessage}»
-                  </p>
-                ) : null}
-              </article>
+              <ToolCard
+                key={t.id}
+                tool={t}
+                plans={plans}
+                saving={saveTool.isPending}
+                onEdit={openToolEdit}
+                onToggleActive={(tool, v) => saveTool.mutate({ ...tool, isActive: v })}
+              />
             ))
           )}
         </div>
       </section>
 
       {/* ── Diálogo: editar plan ── */}
-      <Dialog open={planEditing !== null} onOpenChange={(open) => !open && (setPlanEditing(null), setPlanForm(null))}>
-        <DialogContent className="nice-scroll max-h-[85dvh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar plan</DialogTitle>
-            <DialogDescription>
-              {planEditing?.name} · código {planEditing?.code}
-            </DialogDescription>
-          </DialogHeader>
-          {planForm ? (
-            <div className="grid gap-3.5">
-              <div className="grid gap-1.5">
-                <Label htmlFor="plan-name">Nombre</Label>
-                <Input
-                  id="plan-name"
-                  value={planForm.name}
-                  onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="plan-desc">Descripción</Label>
-                <Textarea
-                  id="plan-desc"
-                  value={planForm.description}
-                  onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="plan-duration">Duración (días)</Label>
-                  <Input
-                    id="plan-duration"
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={planForm.durationDays}
-                    onChange={(e) => setPlanForm({ ...planForm, durationDays: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="plan-price">Precio (CUP)</Label>
-                  <Input
-                    id="plan-price"
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={planForm.priceCup}
-                    onChange={(e) => setPlanForm({ ...planForm, priceCup: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="plan-perm">Créditos permanencia</Label>
-                  <Input
-                    id="plan-perm"
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={planForm.permanenceCredits}
-                    onChange={(e) => setPlanForm({ ...planForm, permanenceCredits: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="plan-tools">Créditos herramientas</Label>
-                  <Input
-                    id="plan-tools"
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={planForm.toolCredits}
-                    onChange={(e) => setPlanForm({ ...planForm, toolCredits: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-line bg-secondary/50 px-3.5 py-2.5">
-                <Label htmlFor="plan-active" className="text-[13px]">
-                  Plan activo y visible
-                </Label>
-                <Switch
-                  id="plan-active"
-                  checked={planForm.isActive}
-                  onCheckedChange={(v) => setPlanForm({ ...planForm, isActive: v })}
-                />
-              </div>
-            </div>
-          ) : null}
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => (setPlanEditing(null), setPlanForm(null))}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="rounded-full"
-              disabled={!planValid || savePlan.isPending}
-              onClick={submitPlan}
-            >
-              {savePlan.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Guardar cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PlanEditDialog
+        planEditing={planEditing}
+        planForm={planForm}
+        onPlanFormChange={setPlanForm}
+        valid={planValid}
+        saving={savePlan.isPending}
+        onSubmit={submitPlan}
+        onClose={closePlanDialog}
+      />
 
       {/* ── Diálogo: editar herramienta ── */}
-      <Dialog open={toolEditing !== null} onOpenChange={(open) => !open && (setToolEditing(null), setToolForm(null))}>
-        <DialogContent className="nice-scroll max-h-[85dvh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar herramienta</DialogTitle>
-            <DialogDescription>
-              {toolEditing?.name} · código {toolEditing?.code}
-            </DialogDescription>
-          </DialogHeader>
-          {toolForm ? (
-            <div className="grid gap-3.5">
-              <div className="grid gap-1.5">
-                <Label htmlFor="tool-name">Nombre</Label>
-                <Input
-                  id="tool-name"
-                  value={toolForm.name}
-                  onChange={(e) => setToolForm({ ...toolForm, name: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="tool-tag">Etiqueta</Label>
-                  <Input
-                    id="tool-tag"
-                    value={toolForm.tag}
-                    onChange={(e) => setToolForm({ ...toolForm, tag: e.target.value })}
-                    placeholder="BÁSICO, PRO, DESTACADO…"
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="tool-cost">Coste (créditos)</Label>
-                  <Input
-                    id="tool-cost"
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={toolForm.creditCost}
-                    onChange={(e) => setToolForm({ ...toolForm, creditCost: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Plan mínimo</Label>
-                <Select
-                  value={toolForm.minPlanCode ?? 'none'}
-                  onValueChange={(v) => setToolForm({ ...toolForm, minPlanCode: v === 'none' ? null : v })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecciona un plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ninguno (créditos)</SelectItem>
-                    {plans.map((p) => (
-                      <SelectItem key={p.code} value={p.code}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="tool-blocked">Mensaje de bloqueo</Label>
-                <Textarea
-                  id="tool-blocked"
-                  value={toolForm.blockedMessage}
-                  onChange={(e) => setToolForm({ ...toolForm, blockedMessage: e.target.value })}
-                  rows={2}
-                  className="resize-none"
-                  placeholder="Texto que verá el mensajero cuando no pueda usarla."
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-line bg-secondary/50 px-3.5 py-2.5">
-                <Label htmlFor="tool-membership" className="text-[13px]">
-                  Requiere membresía activa
-                </Label>
-                <Switch
-                  id="tool-membership"
-                  checked={toolForm.requiresActiveMembership}
-                  onCheckedChange={(v) => setToolForm({ ...toolForm, requiresActiveMembership: v })}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-line bg-secondary/50 px-3.5 py-2.5">
-                <Label htmlFor="tool-active" className="text-[13px]">
-                  Herramienta activa
-                </Label>
-                <Switch
-                  id="tool-active"
-                  checked={toolForm.isActive}
-                  onCheckedChange={(v) => setToolForm({ ...toolForm, isActive: v })}
-                />
-              </div>
-            </div>
-          ) : null}
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => (setToolEditing(null), setToolForm(null))}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="rounded-full"
-              disabled={!toolValid || saveTool.isPending}
-              onClick={submitTool}
-            >
-              {saveTool.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Guardar cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ToolEditDialog
+        toolEditing={toolEditing}
+        toolForm={toolForm}
+        plans={plans}
+        onToolFormChange={setToolForm}
+        valid={toolValid}
+        saving={saveTool.isPending}
+        onSubmit={submitTool}
+        onClose={closeToolDialog}
+      />
     </AdminScreen>
   )
 }

@@ -1,54 +1,61 @@
 // MENRUT v2 — Router de la API operativa (montada en /api/v2/*).
 // Cada ruta delega en su módulo; el envoltorio de functions/api/v2 aplica
 // CORS, límites de payload y el sobre de errores {error: mensaje}.
+// v3: identidad global + shards D1 (ver identity.ts, shard.ts).
 import type { V2Env } from './core';
 import { HttpError } from './core';
-import { passport, plans, popularRoutes, search, territories, tools } from './public';
+import { plans, popularRoutes, search, territories, tools } from './public';
+import { passport, submitReview } from './passport';
 import {
   authSync,
   createReport,
   createSavedRoute,
   deleteSavedRoute,
-  listConversations,
   listFavorites,
-  listMessages,
-  listNotifications,
   listSavedRoutes,
-  markNotificationRead,
-  sendMessage,
-  startConversation,
   toggleFavorite,
   updateMe,
 } from './account';
 import {
+  listConversations,
+  listMessages,
+  listNotifications,
+  markNotificationRead,
+  sendMessage,
+  startConversation,
+} from './social';
+import {
   courierDashboard,
   courierReviews,
   courierWallet,
-  createCourierRoute,
-  deleteCourierRoute,
-  listCourierRoutes,
   requestMembership,
   submitVerification,
   updateCourierProfile,
-  updateCourierRoute,
 } from './courier';
+import {
+  createCourierRoute,
+  deleteCourierRoute,
+  listCourierRoutes,
+  updateCourierRoute,
+} from './courier-routes';
 import { myPayments, requestPlan, uploadProof } from './payments';
 import {
   adminAccounts,
   adminCouriers,
-  adminDecidePayment,
+  adminOverview,
+  adminReviewVerification,
+} from './admin';
+import { adminDecidePayment, adminPayments } from './admin-payments';
+import {
   adminGetConfig,
   adminModeration,
-  adminOverview,
-  adminPayments,
   adminResolveReport,
-  adminReviewPayment,
-  adminReviewVerification,
   adminSaveConfig,
   adminSavePlan,
   adminSaveTool,
   adminSystem,
-} from './admin';
+} from './admin-config';
+import { adminDatabases } from './admin-databases';
 
 export interface RouteResult {
   json: unknown;
@@ -81,8 +88,11 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
   if (method === 'GET' && path[0] === 'search' && path.length === 1) {
     return { json: await search(request, env, url) };
   }
-  if (method === 'GET' && path[0] === 'couriers' && path.length === 2) {
-    return { json: await passport(request, env, path[1]) };
+  if (path[0] === 'couriers') {
+    if (method === 'GET' && path.length === 2) return { json: await passport(request, env, path[1]) };
+    if (method === 'POST' && path.length === 3 && path[2] === 'reviews') {
+      return { json: await submitReview(request, env, path[1], body) };
+    }
   }
   if (method === 'GET' && path[0] === 'plans' && path.length === 1) {
     return { json: await plans(env), headers: CACHE_1H };
@@ -182,9 +192,6 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
     }
     if (method === 'GET' && path[1] === 'accounts' && path.length === 2) return { json: await adminAccounts(request, env) };
     if (method === 'GET' && path[1] === 'payments' && path.length === 2) return { json: await adminPayments(request, env, url) };
-    if (method === 'PATCH' && path[1] === 'payments' && path.length === 3) {
-      return { json: await adminReviewPayment(request, env, path[2], body) };
-    }
     if (method === 'POST' && path[1] === 'payments' && path.length === 4 && path[3] === 'decide') {
       return { json: await adminDecidePayment(request, env, path[2], body) };
     }
@@ -195,6 +202,9 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
       return { json: await adminResolveReport(request, env, path[2], body) };
     }
     if (method === 'GET' && path[1] === 'system' && path.length === 2) return { json: await adminSystem(request, env) };
+    if (method === 'GET' && path[1] === 'databases' && path.length === 2) {
+      return { json: await adminDatabases(request, env), headers: { 'Cache-Control': 'no-store' } };
+    }
     if (path[1] === 'config' && path.length === 2) {
       if (method === 'GET') return { json: await adminGetConfig(request, env) };
       if (method === 'POST') return { json: await adminSaveConfig(request, env, body) };

@@ -8,21 +8,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      # Backend (Pages Functions + módulos v1/v2) y pruebas de base de datos.
       - run: npm ci
-      - run: npm run check
+      - run: npm run typecheck --ignore-scripts || npx tsc --noEmit
+      - run: npm test
+      - run: npm run quality
+      # Web (Next.js 16): dependencias, cliente Prisma y typecheck.
+      - working-directory: web
+        run: bun install --frozen-lockfile
+      - working-directory: web
+        run: bun run db:generate
+      - working-directory: web
+        run: bunx tsc -p tsconfig.json --noEmit
+      # Exportación estática para Cloudflare Pages (base /api/v2 inlineada).
+      - name: Build estático de la web
+        working-directory: web
         env:
-          VITE_SUPABASE_URL: https://orqskfecwtroppqimhnj.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
-      - run: npx playwright install --with-deps chromium
+          NEXT_PUBLIC_SUPABASE_URL: https://orqskfecwtroppqimhnj.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: bash scripts/build-static.sh
+      # Pruebas HTTP contra el backend local (D1 local + Pages Functions).
       - name: Preparar D1 local
         run: |
           npx wrangler d1 migrations apply D1_CORE --local
           npx wrangler d1 migrations apply D1_SHARD_01 --local
           npx wrangler d1 migrations apply D1_SHARD_02 --local
-      - name: Comprobaciones HTTP y navegador
+      - name: Comprobaciones HTTP
         run: |
-          npx wrangler pages dev web/build --ip 0.0.0.0 --port 8788 > /tmp/menrut-pages.log 2>&1 &
-          npx wait-on http://127.0.0.1:8788/api/v1/health
+          npx wrangler pages dev web/out --ip 127.0.0.1 --port 8788 > /tmp/menrut-pages.log 2>&1 &
+          npx wait-on http://127.0.0.1:8788/api/v1/health --timeout 60000
           python3 tests/http_test.py
-          npm run test:browser

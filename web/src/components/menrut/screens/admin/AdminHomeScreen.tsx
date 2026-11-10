@@ -11,6 +11,7 @@ import {
   Flag,
   FlaskConical,
   ArrowRight,
+  Database,
   LayoutDashboard,
 } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -170,6 +171,14 @@ export default function AdminHomeScreen() {
               amber={data.reports.open > 0}
               ctaLabel="Revisar"
               onClick={() => navigate('admin-moderation')}
+            />
+            <MetricCard
+              icon={<Database className="h-4 w-4" aria-hidden />}
+              label="Bases de datos"
+              value="12"
+              hint="2 Supabase + 10 Cloudflare D1"
+              ctaLabel="Ver"
+              onClick={() => navigate('admin-databases')}
             />
           </div>
 

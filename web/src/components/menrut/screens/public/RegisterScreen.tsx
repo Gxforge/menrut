@@ -1,30 +1,32 @@
-// MENRUT — Registro de mensajero
-// El registro es EXCLUSIVO para mensajeros (decisión del propietario):
-// quien busca mensajeros no necesita cuenta — la búsqueda es pública.
-// Flujo real: Supabase signUp → sync con backend → completar perfil.
+// MENRUT — Registro de cuentas (3 tipos)
+// El cliente elige QUÉ cuenta crea:
+//   · Mensajero — publica rutas y su pasaporte profesional
+//   · Usuario   — guarda favoritos, opina y puntúa mensajeros, chatea
+//   · Negocio   — contacta mensajeros para entregas y encargos comerciales
+// La búsqueda es pública: quien solo busca no necesita cuenta (estilo YerroMenu).
+// Flujo real: Supabase signUp (con rol en metadatos) → sync con backend →
+// destino según rol.
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Loader2, Eye, EyeOff, Lock, Mail, User, Compass, Bike } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
+import { ArrowLeft, Compass } from 'lucide-react'
 import { toast } from 'sonner'
 import { MenrutMark } from '@/components/menrut/core/Brand'
 import { signUpWithEmail } from '@/lib/auth'
 import { completeLogin } from '@/components/menrut/hooks'
 import { useAppStore } from '@/lib/store'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { AccountFormFields } from '@/components/menrut/screens/public/RegisterPieces/AccountFormFields'
+import { RolePicker } from '@/components/menrut/screens/public/RegisterPieces/RolePicker'
+import { TermsDialog } from '@/components/menrut/screens/public/RegisterPieces/TermsDialog'
+import {
+  EMAIL_RE, ROLE_OPTIONS, SignupRole,
+} from '@/components/menrut/screens/public/RegisterPieces/roleOptions'
 
 export default function RegisterScreen() {
   const navigate = useAppStore((s) => s.navigate)
   const resetTo = useAppStore((s) => s.resetTo)
 
+  const [role, setRole] = useState<SignupRole | null>(null)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,8 +38,11 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
+  const chosen = ROLE_OPTIONS.find((r) => r.value === role) ?? null
+
   function validate(): boolean {
     const next: Record<string, string> = {}
+    if (!role) next.role = 'Elige qué tipo de cuenta necesitas.'
     if (fullName.trim().length < 3) next.fullName = 'Escribe tu nombre y apellidos.'
     if (!EMAIL_RE.test(email.trim())) next.email = 'Escribe un correo válido.'
     if (password.length < 6) next.password = 'Usa al menos 6 caracteres.'
@@ -53,20 +58,24 @@ export default function RegisterScreen() {
     if (!validate()) return
     setLoading(true)
     try {
-      await signUpWithEmail(email.trim(), password, fullName.trim())
+      await signUpWithEmail(email.trim(), password, fullName.trim(), role ?? 'client')
       try {
-        const user = await completeLogin('courier')
-        // El registro es de mensajero, pero el equipo (propietario /
-        // moderador) reconocido por correo entra directo a su panel.
+        const user = await completeLogin(role ?? 'client')
         if (user.role === 'owner' || user.role === 'admin') {
           toast.success('Cuenta reconocida como Propietario. Entrando al panel.')
           resetTo('admin-home')
         } else if (user.role === 'moderator') {
           toast.success('Cuenta reconocida como Moderador.')
           resetTo('admin-moderation')
-        } else {
+        } else if (user.role === 'business') {
+          toast.success('Cuenta de negocio creada. Bienvenido a MENRUT.')
+          resetTo('home')
+        } else if (user.role === 'courier') {
           toast.success('Cuenta creada. Completa tu perfil profesional.')
           navigate('complete-profile')
+        } else {
+          toast.success('Cuenta creada. Ya puedes guardar favoritos y opinar.')
+          resetTo('home')
         }
       } catch (syncErr) {
         const msg = syncErr instanceof Error ? syncErr.message : ''
@@ -106,19 +115,19 @@ export default function RegisterScreen() {
         >
           <ArrowLeft className="h-5 w-5" aria-hidden />
         </button>
-        <p className="text-[12.5px] text-muted-foreground">Cuenta de mensajero</p>
+        <p className="text-[12.5px] text-muted-foreground">Crear cuenta</p>
       </div>
 
-      <section className="flex flex-1 flex-col py-4" aria-label="Crear cuenta de mensajero">
+      <section className="flex flex-1 flex-col py-4" aria-label="Crear cuenta en MENRUT">
         <div className="flex flex-col items-center text-center">
           <MenrutMark className="h-14 w-14" />
           <h1 className="screen-title mt-3">Crear cuenta</h1>
-          <p className="mt-1 max-w-[300px] text-[13px] text-muted-foreground">
-            Publica tus rutas y tu pasaporte profesional para que te encuentren clientes.
+          <p className="mt-1 max-w-[320px] text-[13px] text-muted-foreground">
+            Elige qué tipo de cuenta necesitas y empieza a usar MENRUT.
           </p>
         </div>
 
-        {/* Quien busca no necesita cuenta: la búsqueda es pública */}
+        {/* Quien solo busca no necesita cuenta: la búsqueda es pública */}
         <div
           className="mt-4 rounded-2xl border border-line bg-card p-4 text-center"
           role="note"
@@ -137,148 +146,65 @@ export default function RegisterScreen() {
           </button>
         </div>
 
+        {/* Selector de tipo de cuenta */}
+        <RolePicker role={role} onRole={setRole} error={errors.role} />
+
         <div className="mt-4 rounded-3xl border border-line bg-card p-5 shadow-[0_18px_50px_rgba(20,67,130,0.08)]">
+          {/* Resumen del rol elegido */}
           <div
             className="mb-4 flex items-center gap-2.5 rounded-2xl bg-orange/10 px-3.5 py-3"
-            aria-label="Tipo de cuenta"
+            aria-live="polite"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/15 text-orange">
-              <Bike className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <p className="text-[13.5px] font-bold leading-tight">Mensajero</p>
-              <p className="text-[12px] leading-snug text-muted-foreground">
-                Ofrezco mi ruta y servicios
-              </p>
-            </div>
+            {chosen ? (
+              <>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/15 text-orange">
+                  <chosen.icon className="h-5 w-5" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-[13.5px] font-bold leading-tight">Cuenta de {chosen.label.toLowerCase()}</p>
+                  <p className="text-[12px] leading-snug text-muted-foreground">{chosen.perks}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/15 text-orange">
+                  <Compass className="h-5 w-5" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-[13.5px] font-bold leading-tight">Selecciona un tipo de cuenta</p>
+                  <p className="text-[12px] leading-snug text-muted-foreground">
+                    Mensajero, usuario o negocio — puedes cambiarlo luego con el equipo.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-            <div className="space-y-1.5">
-              <Label htmlFor="reg-name">Nombre completo</Label>
-              <div className="relative">
-                <User
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="reg-name"
-                  autoComplete="name"
-                  placeholder="Tu nombre y apellidos"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  aria-invalid={!!errors.fullName}
-                  className="h-12 rounded-xl pl-10"
-                />
-              </div>
-              {errors.fullName && <p className="text-xs text-danger">{errors.fullName}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="reg-email">Correo electrónico</Label>
-              <div className="relative">
-                <Mail
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="reg-email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="nombre@correo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={!!errors.email}
-                  className="h-12 rounded-xl pl-10"
-                />
-              </div>
-              {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="reg-password">Contraseña</Label>
-              <div className="relative">
-                <Lock
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="reg-password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Mínimo 6 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={!!errors.password}
-                  className="h-12 rounded-xl pl-10 pr-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground active:scale-90"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-danger">{errors.password}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="reg-confirm">Confirmar contraseña</Label>
-              <div className="relative">
-                <Lock
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <Input
-                  id="reg-confirm"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Repite tu contraseña"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  aria-invalid={!!errors.confirm}
-                  className="h-12 rounded-xl pl-10"
-                />
-              </div>
-              {errors.confirm && <p className="text-xs text-danger">{errors.confirm}</p>}
-            </div>
-
-            <div>
-              <div className="flex items-start gap-2.5">
-                <Checkbox
-                  id="reg-terms"
-                  checked={accepted}
-                  onCheckedChange={(v) => setAccepted(v === true)}
-                  className="mt-0.5"
-                  aria-invalid={!!errors.accepted}
-                />
-                <Label htmlFor="reg-terms" className="text-[12.5px] font-normal leading-relaxed text-muted-foreground">
-                  Acepto los{' '}
-                  <button
-                    type="button"
-                    onClick={() => setTermsOpen(true)}
-                    className="font-semibold text-blue underline-offset-2 hover:underline"
-                  >
-                    Términos y la Política de privacidad
-                  </button>
-                  .
-                </Label>
-              </div>
-              {errors.accepted && <p className="mt-1 text-xs text-danger">{errors.accepted}</p>}
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-12 w-full rounded-full text-[15px] font-bold"
-            >
-              {loading && <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden />}
-              {loading ? 'Creando cuenta…' : 'Crear cuenta de mensajero'}
-            </Button>
-          </form>
+          <AccountFormFields
+            fullName={fullName}
+            onFullName={setFullName}
+            email={email}
+            onEmail={setEmail}
+            password={password}
+            onPassword={setPassword}
+            confirm={confirm}
+            onConfirm={setConfirm}
+            showPassword={showPassword}
+            onToggleShowPassword={() => setShowPassword((v) => !v)}
+            accepted={accepted}
+            onAccepted={setAccepted}
+            errors={errors}
+            onOpenTerms={() => setTermsOpen(true)}
+            loading={loading}
+            submitLabel={
+              loading
+                ? 'Creando cuenta…'
+                : chosen
+                  ? `Crear cuenta de ${chosen.label.toLowerCase()}`
+                  : 'Crear cuenta'
+            }
+            onSubmit={handleSubmit}
+          />
         </div>
 
         <p className="mt-5 text-center text-[13px] text-muted-foreground">
@@ -294,44 +220,7 @@ export default function RegisterScreen() {
       </section>
 
       {/* Términos y privacidad */}
-      <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
-        <DialogContent className="max-h-[80dvh] max-w-[380px] overflow-y-auto rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="font-display">Términos y Política de privacidad</DialogTitle>
-            <DialogDescription className="sr-only">Resumen de las condiciones de uso de MENRUT</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 text-[13px] leading-relaxed text-muted-foreground">
-            <p>
-              <strong className="text-foreground">Qué es MENRUT.</strong> MENRUT es una plataforma que
-              conecta mensajeros, clientes y negocios en Cuba. No presta el servicio de mensajería ni
-              transporta paquetes: facilita el encuentro y la comunicación entre las partes.
-            </p>
-            <p>
-              <strong className="text-foreground">Tus datos.</strong> Solo pedimos la información
-              necesaria para que la plataforma funcione: nombre, correo y los datos profesionales que
-              decidas publicar. Los documentos de verificación se guardan de forma privada y nunca se
-              muestran en tu pasaporte público.
-            </p>
-            <p>
-              <strong className="text-foreground">Verificaciones.</strong> El sello «Identidad
-              verificada» solo aparece cuando el equipo de MENRUT comprueba la identidad del mensajero.
-              El resto de la información del perfil es declarada por su titular.
-            </p>
-            <p>
-              <strong className="text-foreground">Uso responsable.</strong> Los acuerdos de servicio,
-              tarifas y condiciones de entrega se pactan directamente entre cliente y mensajero. Trata
-              con respeto a las personas y usa el botón de reporte si algo no va bien.
-            </p>
-            <p>
-              Puedes cerrar tu cuenta en cualquier momento desde tu perfil. Al continuar, confirmas que
-              entiendes y aceptas estas condiciones.
-            </p>
-          </div>
-          <Button className="h-11 w-full rounded-full font-bold" onClick={() => setTermsOpen(false)}>
-            Entendido
-          </Button>
-        </DialogContent>
-      </Dialog>
+      <TermsDialog open={termsOpen} onOpenChange={setTermsOpen} />
     </div>
   )
 }

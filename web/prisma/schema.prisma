@@ -167,6 +167,7 @@ model Review {
   response   String?
   createdAt  DateTime @default(now())
 
+  @@unique([courierId, authorId])
   @@index([courierId, status])
 }
 

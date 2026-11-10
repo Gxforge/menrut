@@ -8,114 +8,26 @@
 // al fallar. No se afirma lectura sin confirmación del servidor (readAt).
 // El estado visual se DERIVA (servidor + entrantes en vivo + pendientes locales)
 // en lugar de sincronizarse con efectos.
+//
+// Piezas de esta pantalla en ./ChatScreenPieces/ (datos y envío, burbujas,
+// cabecera, lista, composición y reporte); AppRouter sigue importando aquí.
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  AlertCircle, Check, CheckCheck, Clock3, Flag, Loader2, MessageSquare, MoreVertical, RefreshCw, Send,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
-import { TopBar } from '@/components/menrut/core/TopBar'
+import { MessageSquare } from 'lucide-react'
 import { EmptyState } from '@/components/menrut/core/EmptyState'
 import { api } from '@/lib/api'
-import { getAccessToken } from '@/lib/auth'
 import { useAppStore } from '@/lib/store'
-import { getChatSocket } from '@/lib/socket'
-import { cn } from '@/lib/utils'
-import type { MessageDto, Role } from '@/lib/types'
-
-// ─── Tipos locales ──────────────────────────────────────────────────────────
-
-interface ChatBubble {
-  key: string
-  id: string | null // id del servidor una vez confirmado
-  mine: boolean
-  body: string
-  createdAt: string
-  createdMs: number
-  readAt: string | null
-  status: 'sending' | 'sent' | 'error'
-}
-
-function toBubble(m: MessageDto): ChatBubble {
-  const ms = new Date(m.createdAt).getTime()
-  return {
-    key: m.id,
-    id: m.id,
-    mine: m.mine,
-    body: m.body,
-    createdAt: m.createdAt,
-    createdMs: ms,
-    readAt: m.readAt,
-    status: 'sent',
-  }
-}
-
-function makeLocal(body: string): ChatBubble {
-  const now = Date.now()
-  return {
-    key: `local-${now}-${Math.random().toString(36).slice(2, 8)}`,
-    id: null,
-    mine: true,
-    body,
-    createdAt: new Date(now).toISOString(),
-    createdMs: now,
-    readAt: null,
-    status: 'sending',
-  }
-}
-
-function isMessageDto(v: unknown): v is MessageDto {
-  return (
-    typeof v === 'object' && v !== null &&
-    'id' in v && 'body' in v && 'conversationId' in v &&
-    typeof (v as { id: unknown }).id === 'string'
-  )
-}
-
-function isAckOk(v: unknown): v is { ok?: boolean; message?: unknown; error?: string } {
-  return typeof v === 'object' && v !== null
-}
-
-const ROLE_LABELS: Record<Role, string> = {
-  courier: 'Mensajero',
-  client: 'Cliente',
-  business: 'Negocio',
-  admin: 'Equipo MENRUT',
-  owner: 'Propietario',
-  moderator: 'Moderación',
-}
-
-const ACK_TIMEOUT_MS = 3000
-const MAX_LENGTH = 2000
-
-// ─── Estado «en vivo» del socket (useSyncExternalStore) ─────────────────────
-
-function subscribeSocketStatus(cb: () => void) {
-  const socket = getChatSocket()
-  socket.on('connect', cb)
-  socket.on('disconnect', cb)
-  socket.on('connect_error', cb)
-  return () => {
-    socket.off('connect', cb)
-    socket.off('disconnect', cb)
-    socket.off('connect_error', cb)
-  }
-}
-
-function getSocketSnapshot(): boolean {
-  return getChatSocket().connected
-}
-
-function getServerSnapshot(): boolean {
-  return false
-}
+import type { MessageDto } from '@/lib/types'
+import { getServerSnapshot, getSocketSnapshot, subscribeSocketStatus, toBubble, type ChatBubble } from './ChatScreenPieces/data'
+import { useChatRoom } from './ChatScreenPieces/useChatRoom'
+import { useChatSend } from './ChatScreenPieces/useChatSend'
+import { ChatHeader } from './ChatScreenPieces/ChatHeader'
+import { MessageList } from './ChatScreenPieces/MessageList'
+import { Composer } from './ChatScreenPieces/Composer'
+import { ReportDialog } from './ChatScreenPieces/ReportDialog'
 
 // ─── Pantalla ───────────────────────────────────────────────────────────────
 
@@ -129,7 +41,6 @@ export default function ChatScreen() {
   const [pending, setPending] = useState<ChatBubble[]>([])
   const [incoming, setIncoming] = useState<MessageDto[]>([])
   const [draft, setDraft] = useState('')
-  const [roomJoined, setRoomJoined] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
 
@@ -139,6 +50,14 @@ export default function ChatScreen() {
   const endRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const didScrollRef = useRef(false)
+
+  // ── Tiempo real: unirse a la sala y escuchar mensajes nuevos ──
+  const roomJoined = useChatRoom({
+    conversationId,
+    setIncoming,
+    setPending,
+    qc,
+  })
 
   // Historial de la conversación (HTTP). En producción no hay servicio de
   // sockets: cuando la sala en vivo no está activa se sondea cada 8 s para
@@ -199,132 +118,13 @@ export default function ChatScreen() {
     didScrollRef.current = true
   }, [bubbles.length, history.isLoading])
 
-  // ── Tiempo real: unirse a la sala y escuchar mensajes nuevos ──
-  const onNewMessage = useCallback(
-    (msg: unknown) => {
-      if (!isMessageDto(msg) || msg.conversationId !== conversationId) return
-      setIncoming((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
-      if (msg.mine) {
-        // Confirmación en vivo de un envío propio pendiente (ack perdido).
-        setPending((prev) => {
-          const idx = prev.findIndex(
-            (b) => b.id === null && b.status !== 'error' && b.body === msg.body
-          )
-          if (idx < 0) return prev
-          const copy = [...prev]
-          copy[idx] = toBubble(msg)
-          return copy
-        })
-      }
-      qc.invalidateQueries({ queryKey: ['conversations'] })
-    },
-    [conversationId, qc]
-  )
-
-  useEffect(() => {
-    if (!conversationId) return
-    const socket = getChatSocket()
-    // El servicio de chat valida el JWT en cada join/send.
-    const join = async () => {
-      try {
-        const token = await getAccessToken()
-        socket.emit('chat:join', { conversationId, token }, (res: unknown) => {
-          setRoomJoined(isAckOk(res) && res.ok === true)
-        })
-      } catch {
-        // Sin sesión/token: el historial y el envío usan HTTP.
-        setRoomJoined(false)
-      }
-    }
-    const onConnect = () => void join()
-    if (socket.connected) void join()
-    socket.on('connect', onConnect)
-    socket.on('chat:new', onNewMessage)
-    return () => {
-      socket.off('connect', onConnect)
-      socket.off('chat:new', onNewMessage)
-      try {
-        socket.emit('chat:leave', { conversationId })
-      } catch {
-        // sin conexión: nada que limpiar
-      }
-    }
-  }, [conversationId, onNewMessage])
-
-  // ── Envío optimista con socket + fallback REST ──
-  async function restSend(key: string, body: string) {
-    try {
-      const { message } = await api.sendMessage(conversationId as string, body)
-      setPending((prev) => prev.map((b) => (b.key === key ? toBubble(message) : b)))
-      qc.invalidateQueries({ queryKey: ['messages', conversationId] })
-    } catch {
-      setPending((prev) => prev.map((b) => (b.key === key ? { ...b, status: 'error' } : b)))
-      toast.error('No se envió. Toca para reintentar.')
-    }
-  }
-
-  async function send(body: string) {
-    const text = body.trim()
-    if (!text || !conversationId) return
-    const local = makeLocal(text)
-    setPending((prev) => [...prev, local])
-
-    const socket = getChatSocket()
-    let token: string | null = null
-    try {
-      token = await getAccessToken()
-    } catch {
-      token = null
-    }
-    if (!socket.connected || !token) {
-      // Socket desconectado o sin token → directamente por REST (adjunta JWT).
-      void restSend(local.key, text)
-      return
-    }
-
-    let settled = false
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true
-        void restSend(local.key, text)
-      }
-    }, ACK_TIMEOUT_MS)
-
-    try {
-      socket.emit(
-        'chat:send',
-        { conversationId, token, body: text },
-        (ack: unknown) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          if (isAckOk(ack) && ack.ok) {
-            const confirmed = ack.message
-            if (isMessageDto(confirmed)) {
-              setPending((prev) => prev.map((b) => (b.key === local.key ? toBubble(confirmed) : b)))
-            } else {
-              // Confirmado por el servicio, sin copia del mensaje: pedimos historial.
-              setPending((prev) => prev.map((b) => (b.key === local.key ? { ...b, status: 'sent' } : b)))
-              qc.invalidateQueries({ queryKey: ['messages', conversationId] })
-            }
-          } else {
-            // El servicio rechazó el envío: probamos por REST antes de marcar error.
-            void restSend(local.key, text)
-          }
-        }
-      )
-    } catch {
-      clearTimeout(timer)
-      void restSend(local.key, text)
-    }
-  }
-
-  function retry(key: string) {
-    const bubble = pending.find((b) => b.key === key)
-    if (!bubble) return
-    setPending((prev) => prev.map((b) => (b.key === key ? { ...b, status: 'sending' } : b)))
-    void restSend(key, bubble.body)
-  }
+  // ── Envío optimista (socket + fallback REST) y reintento ──
+  const { send, retry } = useChatSend({
+    conversationId: conversationId as string,
+    pending,
+    setPending,
+    qc,
+  })
 
   function submit() {
     if (!draft.trim()) return
@@ -388,33 +188,15 @@ export default function ChatScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar
+      <ChatHeader
         title={otherName ?? 'Conversación'}
-        subtitle={other ? ROLE_LABELS[other.otherRole] : undefined}
+        otherRole={other?.otherRole}
         onBack={() => {
           const s = useAppStore.getState()
           if (s.history.length > 0) s.back()
           else s.navigate('inbox')
         }}
-        right={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Opciones de la conversación"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-sm transition-transform active:scale-95"
-              >
-                <MoreVertical className="h-5 w-5" aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-2xl">
-              <DropdownMenuItem onClick={() => setReportOpen(true)} className="gap-2 rounded-xl text-danger focus:text-danger">
-                <Flag className="h-4 w-4" aria-hidden />
-                Reportar conversación
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
+        onReport={() => setReportOpen(true)}
       />
 
       {!live && (
@@ -429,158 +211,35 @@ export default function ChatScreen() {
       )}
 
       {/* Área de mensajes */}
-      <div ref={scrollRef} className="nice-scroll flex-1 overflow-y-auto px-4 py-3" aria-label="Mensajes">
-        {history.isLoading ? (
-          <div className="space-y-3" aria-busy="true" aria-label="Cargando historial">
-            <BubbleSkeleton mine={false} />
-            <BubbleSkeleton mine />
-            <BubbleSkeleton mine={false} />
-            <BubbleSkeleton mine />
-          </div>
-        ) : history.isError ? (
-          <div className="px-2 pt-4">
-            <EmptyState
-              icon={<RefreshCw className="h-8 w-8" aria-hidden />}
-              title="No pudimos cargar la conversación"
-              hint="Revisa tu conexión e inténtalo de nuevo."
-              actionLabel="Reintentar"
-              onAction={() => history.refetch()}
-            />
-          </div>
-        ) : bubbles.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-            <p className="text-[13.5px] font-semibold">Todavía no hay mensajes</p>
-            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-              Saluda y acuerda los detalles del envío. Las condiciones del servicio se coordinan
-              entre ambas partes.
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="pb-2 text-center text-[10.5px] leading-relaxed text-muted-foreground">
-              Las condiciones del servicio se coordinan entre ambas partes.
-            </p>
-            <div className="space-y-2.5">
-              {bubbles.map((b) => (
-                <Bubble key={b.key} bubble={b} onRetry={() => retry(b.key)} />
-              ))}
-            </div>
-          </>
-        )}
-        <div ref={endRef} aria-hidden />
-      </div>
+      <MessageList
+        scrollRef={scrollRef}
+        endRef={endRef}
+        isLoading={history.isLoading}
+        isError={history.isError}
+        onRetryLoad={() => history.refetch()}
+        bubbles={bubbles}
+        onRetry={retry}
+      />
 
       {/* Composición: fija al fondo del frame, compacta para el teclado móvil */}
-      <div className="border-t border-line/70 bg-card/95 p-3 pb-safe">
-        <div className="flex items-end gap-2">
-          <Textarea
-            ref={taRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onInput={autoResize}
-            onKeyDown={onKeyDown}
-            rows={1}
-            maxLength={MAX_LENGTH}
-            placeholder="Escribe un mensaje…"
-            aria-label="Mensaje"
-            className="max-h-[120px] min-h-[44px] flex-1 resize-none rounded-2xl border-line bg-background px-3.5 py-2.5 text-[13.5px] leading-snug shadow-none focus-visible:ring-blue/25"
-          />
-          <Button
-            type="button"
-            onClick={submit}
-            disabled={!draft.trim()}
-            aria-label="Enviar mensaje"
-            className="h-11 w-11 shrink-0 rounded-full p-0"
-          >
-            <Send className="h-4.5 w-4.5" aria-hidden />
-          </Button>
-        </div>
-      </div>
+      <Composer
+        taRef={taRef}
+        draft={draft}
+        onDraftChange={setDraft}
+        onInput={autoResize}
+        onKeyDown={onKeyDown}
+        onSubmit={submit}
+      />
 
       {/* Reportar conversación */}
-      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent className="mx-4 max-w-[360px] rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>Reportar conversación</DialogTitle>
-            <DialogDescription>
-              Cuéntanos qué ocurrió. El equipo revisará el reporte con confidencialidad.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={reportReason}
-            onChange={(e) => setReportReason(e.target.value)}
-            rows={4}
-            maxLength={500}
-            placeholder="Motivo del reporte (mínimo 10 caracteres)"
-            aria-label="Motivo del reporte"
-            className="rounded-2xl"
-          />
-          <DialogFooter>
-            <Button variant="secondary" className="h-11 flex-1 rounded-full" onClick={() => setReportOpen(false)} disabled={report.isPending}>
-              Cancelar
-            </Button>
-            <Button className="h-11 flex-1 rounded-full font-semibold" onClick={submitReport} disabled={report.isPending}>
-              {report.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Flag className="h-4 w-4" aria-hidden />}
-              Enviar reporte
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-// ─── Burbuja de mensaje ─────────────────────────────────────────────────────
-
-function Bubble({ bubble: b, onRetry }: { bubble: ChatBubble; onRetry: () => void }) {
-  const time = new Date(b.createdAt).toLocaleTimeString('es-CU', { hour: '2-digit', minute: '2-digit' })
-
-  if (!b.mine) {
-    return (
-      <div className="flex flex-col items-start gap-0.5">
-        <div className="max-w-[78%] rounded-2xl rounded-bl-md border border-line bg-card px-3.5 py-2 text-[13.5px] leading-relaxed">
-          {b.body}
-        </div>
-        <span className="pl-1 text-[10px] text-muted-foreground">{time}</span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col items-end gap-0.5">
-      <div
-        className={cn(
-          'max-w-[78%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px] leading-relaxed',
-          b.status === 'error' ? 'border border-danger/40 bg-card text-foreground' : 'bg-blue text-white'
-        )}
-      >
-        {b.body}
-      </div>
-      {b.status === 'error' ? (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="flex items-center gap-1 pr-0.5 text-[10.5px] font-semibold text-danger"
-        >
-          <AlertCircle className="h-3 w-3" aria-hidden />
-          No se envió · Toca para reintentar
-        </button>
-      ) : (
-        <span className="flex items-center gap-1 pr-0.5 text-[10px] text-muted-foreground">
-          {time}
-          {b.status === 'sending' && <Clock3 className="h-3 w-3" aria-label="Enviando" />}
-          {b.status === 'sent' && b.readAt && <CheckCheck className="h-3 w-3" aria-label="Leído" />}
-          {b.status === 'sent' && !b.readAt && <Check className="h-3 w-3" aria-label="Enviado" />}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function BubbleSkeleton({ mine }: { mine: boolean }) {
-  return (
-    <div className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
-      <Skeleton className={cn('h-9 rounded-2xl', mine ? 'w-40 rounded-br-md' : 'w-48 rounded-bl-md')} />
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        reason={reportReason}
+        onReasonChange={setReportReason}
+        onSubmit={submitReport}
+        pending={report.isPending}
+      />
     </div>
   )
 }

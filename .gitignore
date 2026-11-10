@@ -21,3 +21,4 @@ scripts/rebuild_supabase.py
 web/.env.local
 playwright-report/
 test-results/
+.seed/

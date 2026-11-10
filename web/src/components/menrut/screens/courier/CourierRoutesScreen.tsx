@@ -1,29 +1,24 @@
 // MENRUT — Mis rutas · Gestión de recorridos del mensajero
+// (Estados previos y lista con acciones viven en CourierRoutesScreenPieces/.)
 'use client'
 
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  Plus, MoreVertical, Pencil, PauseCircle, PlayCircle, Trash2, EyeOff, MapPin,
-  Route as RouteIcon,
-} from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
 import { TopBar } from '@/components/menrut/core/TopBar'
 import { RouteCard } from '@/components/menrut/core/RouteCard'
 import { CoverageBadge } from '@/components/menrut/core/StatusBadge'
-import { EmptyState, RouteSkeleton } from '@/components/menrut/core/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
+import {
+  NoRoutesEmpty, RoutesError, RoutesLoading, ZoneEmpty,
+} from './CourierRoutesScreenPieces/RouteGuards'
+import { RoutesList } from './CourierRoutesScreenPieces/RoutesList'
+import { DeleteRouteDialog } from './CourierRoutesScreenPieces/DeleteRouteDialog'
 import type { CoverageType, RouteDto } from '@/lib/types'
 
 type TabKey = 'active' | 'scheduled' | 'paused'
@@ -94,34 +89,12 @@ export default function CourierRoutesScreen() {
 
   // ── Carga ─────────────────────────────────────────────────────────────
   if (routesQ.isLoading) {
-    return (
-      <div>
-        <TopBar title="Mis rutas" subtitle="Gestiona tus trayectos publicados" />
-        <div className="px-4 pt-4 pb-8">
-          <div className="mb-4"><RouteSkeleton /></div>
-          <div className="mb-4"><RouteSkeleton /></div>
-          <RouteSkeleton />
-        </div>
-      </div>
-    )
+    return <RoutesLoading />
   }
 
   // ── Error ─────────────────────────────────────────────────────────────
   if (routesQ.isError || !routesQ.data) {
-    return (
-      <div>
-        <TopBar title="Mis rutas" subtitle="Gestiona tus trayectos publicados" />
-        <div className="px-4 pt-6 pb-8">
-          <EmptyState
-            icon={<EyeOff className="h-8 w-8" aria-hidden />}
-            title="No se pudieron cargar tus rutas"
-            hint="Revisa tu conexión e inténtalo de nuevo."
-            actionLabel="Reintentar"
-            onAction={() => void routesQ.refetch()}
-          />
-        </div>
-      </div>
-    )
+    return <RoutesError onRetry={() => void routesQ.refetch()} />
   }
 
   const routes = routesQ.data.routes
@@ -135,98 +108,10 @@ export default function CourierRoutesScreen() {
   if (routes.length === 0) {
     if (tipo === 'zone') {
       // Mensajero de zona sin rutas: su trabajo no se publica como trayectos.
-      return (
-        <div>
-          <TopBar
-            title="Mis rutas"
-            subtitle="Gestiona tus trayectos publicados"
-          />
-          <div className="px-4 pt-6 pb-8">
-            <EmptyState
-              icon={<MapPin className="h-8 w-8" aria-hidden />}
-              title="No necesitas publicar rutas"
-              hint="Trabajas dentro de tu municipio base: los clientes de tu zona te encuentran en búsquedas locales, sin rutas interterritoriales."
-              actionLabel="Cambiar mi tipo de trabajo"
-              onAction={() => navigate('complete-profile')}
-            />
-          </div>
-        </div>
-      )
+      return <ZoneEmpty onChangeType={() => navigate('complete-profile')} />
     }
-    return (
-      <div>
-        <TopBar
-          title="Mis rutas"
-          subtitle="Gestiona tus trayectos publicados"
-          right={
-            <Button size="sm" className="h-9 rounded-full px-4" onClick={abrirPublicar}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Publicar
-            </Button>
-          }
-        />
-        <div className="px-4 pt-6 pb-8">
-          <EmptyState
-            icon={<RouteIcon className="h-8 w-8" aria-hidden />}
-            title="Aún no publicas rutas"
-            hint="Publica tu primer recorrido para que los clientes de esa trayectoria te encuentren."
-            actionLabel="Publicar ruta"
-            onAction={abrirPublicar}
-          />
-        </div>
-      </div>
-    )
+    return <NoRoutesEmpty onPublish={abrirPublicar} />
   }
-
-  const renderLista = (lista: RouteDto[], vacio: string) =>
-    lista.length === 0 ? (
-      <p className="rounded-2xl border border-dashed border-line bg-card px-4 py-8 text-center text-[13px] text-muted-foreground">
-        {vacio}
-      </p>
-    ) : (
-      <div className="space-y-3">
-        {lista.map((r) => (
-          <div key={r.id} className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <RouteCard route={r} />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label={`Acciones para la ruta ${r.origin} a ${r.destination}`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-card text-muted-foreground shadow-sm transition-transform active:scale-95 hover:text-foreground"
-              >
-                <MoreVertical className="h-5 w-5" aria-hidden />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={() => abrirEditar(r)}>
-                  <Pencil className="h-4 w-4" aria-hidden />
-                  Editar
-                </DropdownMenuItem>
-                {r.status !== 'paused' ? (
-                  <DropdownMenuItem onClick={() => statusQ.mutate({ id: r.id, status: 'paused' })}>
-                    <PauseCircle className="h-4 w-4" aria-hidden />
-                    Pausar
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => statusQ.mutate({ id: r.id, status: 'active' })}>
-                    <PlayCircle className="h-4 w-4" aria-hidden />
-                    Reanudar
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setDeleteTarget(r)}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                  Eliminar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
-      </div>
-    )
 
   return (
     <div>
@@ -260,13 +145,31 @@ export default function CourierRoutesScreen() {
           </TabsList>
 
           <TabsContent value="active" className="mt-0">
-            {renderLista(activas, 'No tienes rutas activas ahora mismo.')}
+            <RoutesList
+              lista={activas}
+              vacio="No tienes rutas activas ahora mismo."
+              onEdit={abrirEditar}
+              onStatus={(p) => statusQ.mutate(p)}
+              onDelete={setDeleteTarget}
+            />
           </TabsContent>
           <TabsContent value="scheduled" className="mt-0">
-            {renderLista(programadas, 'No tienes rutas programadas.')}
+            <RoutesList
+              lista={programadas}
+              vacio="No tienes rutas programadas."
+              onEdit={abrirEditar}
+              onStatus={(p) => statusQ.mutate(p)}
+              onDelete={setDeleteTarget}
+            />
           </TabsContent>
           <TabsContent value="paused" className="mt-0">
-            {renderLista(pausadas, 'No tienes rutas en pausa.')}
+            <RoutesList
+              lista={pausadas}
+              vacio="No tienes rutas en pausa."
+              onEdit={abrirEditar}
+              onStatus={(p) => statusQ.mutate(p)}
+              onDelete={setDeleteTarget}
+            />
           </TabsContent>
         </Tabs>
 
@@ -289,26 +192,11 @@ export default function CourierRoutesScreen() {
       </div>
 
       {/* Confirmación de borrado */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta ruta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              «{deleteTarget?.origin} → {deleteTarget?.destination}» se quitará de tu perfil y de las
-              búsquedas. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Conservar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => deleteTarget && deleteQ.mutate(deleteTarget.id)}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteRouteDialog
+        deleteTarget={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={(id) => deleteQ.mutate(id)}
+      />
     </div>
   )
 }

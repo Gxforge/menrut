@@ -175,9 +175,10 @@ export async function parseRoutePayload(
   return payload;
 }
 
-// Duplicado: el mensajero ya tiene una ruta activa igual publicada.
+// Duplicado: el mensajero ya tiene una ruta activa igual publicada (shard).
 export async function assertNoDuplicateActiveRoute(
   env: V2Env,
+  db: D1Database,
   courierId: string,
   scope: 'municipal' | 'provincial',
   originId: string | null | undefined,
@@ -185,14 +186,15 @@ export async function assertNoDuplicateActiveRoute(
   excludeId?: string,
 ): Promise<void> {
   if (!originId || !destinationId) return;
-  const dup = await env.D1_CORE.prepare(
-    `SELECT id FROM Route WHERE courierId=? AND status='active' AND id<>?
-     AND ${
-       scope === 'provincial'
-         ? 'originProvinceId=? AND destinationProvinceId=?'
-         : 'originMunicipalityId=? AND destinationMunicipalityId=?'
-     } LIMIT 1`
-  )
+  const dup = await db
+    .prepare(
+      `SELECT id FROM courier_routes WHERE user_id=? AND status='active' AND id<>?
+       AND ${
+         scope === 'provincial'
+           ? 'origin_province_id=? AND destination_province_id=?'
+           : 'origin_id=? AND destination_id=?'
+       } LIMIT 1`
+    )
     .bind(courierId, excludeId ?? '', originId, destinationId)
     .first();
   if (dup) throw new HttpError(409, 'Ya tienes una ruta igual publicada.');

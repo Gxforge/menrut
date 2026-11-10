@@ -1,6 +1,7 @@
 // MENRUT v2 — Pagos manuales por Transfermóvil: el mensajero elige plan,
 // recibe instrucciones (PlatformConfig), paga y sube la captura al bucket
-// PRIVADO con service_role (nunca desde el navegador); el propietario decide.
+// PRIVADO con service_role (nunca desde el navegador); el propietario decide y
+// la acreditación al shard es idempotente (ver admin-payments.ts y wallet.ts).
 import {
   asString,
   audit,
@@ -8,14 +9,14 @@ import {
   HttpError,
   newId,
   nowMs,
-  requireAuth,
   requireExactRole,
   supabaseRemove,
   supabaseUpload,
   type V2Env,
 } from './core';
+import { requireAuth } from './identity';
+import { requireCourierShard } from './courier';
 import { PAYMENT_PROOF_SELECT, toPaymentProofDto, type PaymentProofRow } from './dto';
-import { requireCourierProfile } from './wallet';
 
 const BUCKET = 'payment-proofs-private';
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -56,15 +57,15 @@ async function readPaymentInstructions(
 // ─── POST /payments/request ─────────────────────────────────────────────────
 export async function requestPlan(request: Request, env: V2Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  requireExactRole(user, 'courier');
+  requireExactRole(user.role, 'courier');
   await checkRate(env, `payment-request:${user.id}`, 10, 60_000);
   const db = env.D1_CORE;
-  const profile = await requireCourierProfile(env, user.id);
+  await requireCourierShard(env, user.id);
 
   const planId = asString(body.planId)?.trim() ?? '';
   if (!planId) throw new HttpError(400, 'Selecciona un plan.');
   const plan = await db
-    .prepare('SELECT * FROM MembershipPlan WHERE id=? LIMIT 1')
+    .prepare('SELECT id, code, name, priceCup, isActive, isTrial FROM MembershipPlan WHERE id=? LIMIT 1')
     .bind(planId)
     .first<{ id: string; code: string; name: string; priceCup: number; isActive: number; isTrial: number }>();
   if (!plan || !plan.isActive) throw new HttpError(400, 'El plan seleccionado no está disponible.');
@@ -74,17 +75,17 @@ export async function requestPlan(request: Request, env: V2Env, body: Record<str
 
   // Una sola solicitud pendiente por mensajero.
   const pending = await db
-    .prepare("SELECT id FROM PaymentProof WHERE courierId=? AND status='pending' LIMIT 1")
-    .bind(profile.id)
+    .prepare("SELECT id FROM payment_proofs WHERE courier_id=? AND status IN ('pending','approved') LIMIT 1")
+    .bind(user.id)
     .first<{ id: string }>();
   if (pending) throw new HttpError(409, 'Ya tienes una solicitud en revisión.');
 
   const proofId = newId();
   await db
     .prepare(
-      "INSERT INTO PaymentProof(id,courierId,submittedBy,planId,amountCup,confirmedAmountCup,method,reference,proofUrl,status,createdAt) VALUES(?,?,?,?,?,NULL,'transfermovil','','','pending',?)"
+      "INSERT INTO payment_proofs(id,courier_id,submitted_by,plan_id,amount_cup,method,reference,proof_url,status,created_at) VALUES(?,?,?,?,?,'transfermovil','','','pending',?)"
     )
-    .bind(proofId, profile.id, user.id, plan.id, plan.priceCup, nowMs())
+    .bind(proofId, user.id, user.id, plan.id, plan.priceCup, Math.floor(nowMs() / 1000))
     .run();
 
   const proof = (await db
@@ -97,7 +98,7 @@ export async function requestPlan(request: Request, env: V2Env, body: Record<str
     env,
     user.id,
     'payment.requested',
-    'PaymentProof',
+    'payment_proofs',
     proofId,
     `Mensajero: ${user.fullName}. Plan: ${plan.name} (${plan.code}). Importe: ${plan.priceCup} CUP.`,
   );
@@ -108,18 +109,16 @@ export async function requestPlan(request: Request, env: V2Env, body: Record<str
 // ─── POST /payments/:id/proof (multipart/form-data, campo file) ─────────────
 export async function uploadProof(request: Request, env: V2Env, proofId: string): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  requireExactRole(user, 'courier');
+  requireExactRole(user.role, 'courier');
   await checkRate(env, `payment-proof:${user.id}`, 10, 60_000);
   const db = env.D1_CORE;
-  const profile = await requireCourierProfile(env, user.id);
+  await requireCourierShard(env, user.id);
 
-  const proof = await db.prepare('SELECT * FROM PaymentProof WHERE id=? LIMIT 1').bind(proofId).first<{
-    id: string;
-    courierId: string;
-    status: string;
-    proofUrl: string;
-  }>();
-  if (!proof || proof.courierId !== profile.id) throw new HttpError(404, 'Solicitud de pago no encontrada.');
+  const proof = await db
+    .prepare('SELECT id, courier_id, status, proof_url FROM payment_proofs WHERE id=? LIMIT 1')
+    .bind(proofId)
+    .first<{ id: string; courier_id: string; status: string; proof_url: string }>();
+  if (!proof || proof.courier_id !== user.id) throw new HttpError(404, 'Solicitud de pago no encontrada.');
   if (proof.status !== 'pending') {
     throw new HttpError(409, 'Esta solicitud ya fue revisada y no admite más comprobantes.');
   }
@@ -137,21 +136,21 @@ export async function uploadProof(request: Request, env: V2Env, proofId: string)
   }
 
   const buffer = await file.arrayBuffer();
-  const path = `proofs/${profile.id}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const path = `proofs/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
   await supabaseUpload(env, BUCKET, path, buffer, contentType);
 
   // Si reemplaza una captura anterior, se elimina del bucket (best-effort).
-  if (proof.proofUrl && !proof.proofUrl.startsWith('http')) {
-    await supabaseRemove(env, BUCKET, [proof.proofUrl]);
+  if (proof.proof_url && !proof.proof_url.startsWith('http')) {
+    await supabaseRemove(env, BUCKET, [proof.proof_url]);
   }
 
-  await db.prepare('UPDATE PaymentProof SET proofUrl=? WHERE id=?').bind(path, proof.id).run();
+  await db.prepare('UPDATE payment_proofs SET proof_url=? WHERE id=?').bind(path, proof.id).run();
 
   await audit(
     env,
     user.id,
     'payment.proof_uploaded',
-    'PaymentProof',
+    'payment_proofs',
     proof.id,
     `Mensajero: ${user.fullName}. Archivo: ${path} (${file.size} bytes).`,
   );
@@ -166,15 +165,10 @@ export async function uploadProof(request: Request, env: V2Env, proofId: string)
 // ─── GET /payments/mine ─────────────────────────────────────────────────────
 export async function myPayments(request: Request, env: V2Env): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  requireExactRole(user, 'courier');
-  const profile = await env.D1_CORE
-    .prepare('SELECT id FROM CourierProfile WHERE userId=? LIMIT 1')
-    .bind(user.id)
-    .first<{ id: string }>();
-  if (!profile) return { payments: [] };
+  requireExactRole(user.role, 'courier');
   const rows = await env.D1_CORE
-    .prepare(`${PAYMENT_PROOF_SELECT} WHERE pp.courierId=? ORDER BY pp.createdAt DESC`)
-    .bind(profile.id)
+    .prepare(`${PAYMENT_PROOF_SELECT} WHERE pp.courier_id=? ORDER BY pp.created_at DESC`)
+    .bind(user.id)
     .all();
   return { payments: ((rows.results ?? []) as unknown as PaymentProofRow[]).map(toPaymentProofDto) };
 }

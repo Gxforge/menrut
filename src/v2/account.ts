@@ -1,130 +1,77 @@
-// MENRUT v2 — Cuenta y sociales: sync de identidad, perfil propio, reportes,
-// favoritos, rutas guardadas, conversaciones/mensajes y notificaciones.
+// MENRUT v2 — Cuenta y sociales: sync de identidad global (con asignación de
+// shard para mensajeros), perfil propio, denuncias (→ shard del mensajero),
+// favoritos y rutas guardadas del cliente.
 import {
-  adminEmails,
   asBool,
   asString,
   checkRate,
-  findUserByIdentity,
   HttpError,
-  moderatorEmails,
   newId,
   nowMs,
-  ownerEmails,
-  requireAuth,
   verifySupabaseToken,
   type V2Env,
 } from './core';
-import { toMessageDto, toNotificationDto, toSessionUser } from './dto';
-import { activateTrialPlan, reconcileWallet } from './wallet';
-
-const VALID_BODY_ROLES = ['client', 'courier', 'business'];
+import { resolveAccount, requireAuth, loadAccount, type DbUser } from './identity';
+import { assignedShard, ownShard, syncProjection } from './shard';
+import { activateTrial } from './wallet';
+import { toSessionUser } from './dto';
 
 // ─── POST /auth/sync ────────────────────────────────────────────────────────
-// Sincroniza la identidad Supabase con el User operativo: lo crea si es la
-// primera vez (rol del body; staff solo por listas de correos) y prepara el
-// perfil de mensajero + cartera + prueba gratuita si corresponde.
+// Sincroniza la identidad Supabase con la cuenta global; si es mensajero,
+// asegura su shard propietario (round-robin persistente), el perfil del shard,
+// la cartera y la prueba gratuita si corresponde. Nunca reasigna shards.
 export async function authSync(request: Request, env: V2Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const db = env.D1_CORE;
   const identity = await verifySupabaseToken(request, env);
   if (!identity) throw new HttpError(401, 'Sesión no válida. Inicia sesión de nuevo.');
-  const email = identity.email;
-  if (!email) throw new HttpError(400, 'La cuenta no tiene correo asociado.');
+  if (!identity.email) throw new HttpError(400, 'La cuenta no tiene correo asociado.');
   await checkRate(env, `sync:${identity.sub}`, 30, 60_000);
 
-  const bodyRole = asString(body?.role);
-  // Respaldo de metadatos (igual que en desarrollo): si el body no trae un rol
-  // válido se usa el guardado al registrarse (user_metadata.account_role,
-  // firmado por Supabase dentro del JWT ya verificado). Solo se admiten
-  // client/courier/business; el staff sigue viniendo de las listas de correos.
-  const metaRole = identity.accountRole;
-  const wantedRole = VALID_BODY_ROLES.includes(bodyRole ?? '')
-    ? (bodyRole as string)
-    : VALID_BODY_ROLES.includes(metaRole ?? '')
-      ? (metaRole as string)
-      : null;
-  const fullName = identity.fullName ?? email;
+  const user = await resolveAccount(env, identity, asString(body?.role));
 
-  const isOwnerEmail = ownerEmails(env).includes(email);
-  const isAdminEmail = !isOwnerEmail && adminEmails(env).includes(email);
-  const isModeratorEmail = !isOwnerEmail && !isAdminEmail && moderatorEmails(env).includes(email);
-
-  let user = await findUserByIdentity(env, identity);
-  const now = nowMs();
-
-  if (!user) {
-    const id = newId();
-    const role = isOwnerEmail ? 'owner' : isAdminEmail ? 'admin' : isModeratorEmail ? 'moderator' : wantedRole ?? 'client';
-    await db
-      .prepare(
-        'INSERT INTO User(id,email,supabaseUserId,role,fullName,phone,avatarUrl,status,hasUsedTrial,isDemo,createdAt,updatedAt) VALUES(?,?,?,?,?,NULL,NULL,?,0,0,?,?)'
-      )
-      .bind(id, email, identity.sub, role, fullName, 'active', now, now)
-      .run();
-    user = (await db.prepare('SELECT * FROM User WHERE id=?').bind(id).first()) as unknown as NonNullable<typeof user>;
-  } else {
-    // Jerarquía: owner (nunca se degrada) > admin > moderador. Solo se sube por
-    // listas de correos; PROHIBIDO otorgar owner/moderator/admin desde el body.
-    const patch: string[] = [];
-    const values: unknown[] = [];
-    if (!user.supabaseUserId) {
-      patch.push('supabaseUserId=?');
-      values.push(identity.sub);
-    }
-    if (isOwnerEmail && user.role !== 'owner') {
-      patch.push('role=?');
-      values.push('owner');
-    } else if (isAdminEmail && user.role !== 'admin' && user.role !== 'owner') {
-      patch.push('role=?');
-      values.push('admin');
-    } else if (isModeratorEmail && (user.role === 'client' || user.role === 'business')) {
-      patch.push('role=?');
-      values.push('moderator');
-    }
-    if (patch.length > 0) {
-      values.push(now, user.id);
-      await db.prepare(`UPDATE User SET ${patch.join(',')}, updatedAt=? WHERE id=?`).bind(...values).run();
-      user = (await db.prepare('SELECT * FROM User WHERE id=?').bind(user.id).first()) as unknown as NonNullable<typeof user>;
-    }
-  }
-
-  // Regla de seguridad: el rol solo puede "subir" desde cliente/negocio.
-  const isStaffEmail = isOwnerEmail || isAdminEmail || isModeratorEmail;
-  if (!isStaffEmail && (user.role === 'client' || user.role === 'business') && wantedRole && user.role !== wantedRole) {
-    await db.prepare('UPDATE User SET role=?, updatedAt=? WHERE id=?').bind(wantedRole, now, user.id).run();
-    user = { ...user, role: wantedRole };
-  }
-
-  // Perfil de mensajero + cartera + prueba gratuita (si corresponde).
   if (user.role === 'courier') {
-    const profile = await db.prepare('SELECT id FROM CourierProfile WHERE userId=? LIMIT 1').bind(user.id).first<{ id: string }>();
-    if (!profile) {
-      const pid = newId();
-      // OJO: valores fijos como literales en el SQL y solo 4 parámetros
-      // (id, userId, createdAt, updatedAt). El INSERT anterior mezclaba 10
-      // placeholders con 7 binds y columnas NOT NULL recibiendo NULL → error
-      // 500 en /auth/sync para todo mensajero nuevo.
-      await db.batch([
-        db
-          .prepare(
-            "INSERT INTO CourierProfile(id,userId,bio,yearsExperience,verificationStatus,isPublic,ratingAvg,ratingCount,verifiedDeliveries,baseFeeCup,availabilityNote,vehicleSummary,contactPreference,coverageType,isDemo,createdAt,updatedAt) VALUES(?,?, '',0,'unverified',1,0,0,0,NULL,'','','chat','municipal',0,?,?)"
-          )
-          .bind(pid, user.id, now, now),
-        db
-          .prepare('INSERT INTO Wallet(id,courierId,permanenceCredits,toolCredits,lastConsumedAt,updatedAt) VALUES(?,?,0,0,NULL,?)')
-          .bind(newId(), pid, now),
-      ]);
-      if (!user.hasUsedTrial) {
-        await activateTrialPlan(env, user.id, pid);
-        user = { ...user, hasUsedTrial: 1 };
-      }
-    } else {
-      // Reconciliación lazy de permanencia en cada sync.
-      await reconcileWallet(env, profile.id);
+    await provisionCourier(env, user);
+  }
+  return { user: toSessionUser(user) };
+}
+
+/** Crea (una sola vez) el perfil + cartera del shard y sincroniza la proyección. */
+async function provisionCourier(env: V2Env, user: DbUser): Promise<void> {
+  const { db } = await ownShard(env, user.id);
+  const nowSec = Math.floor(nowMs() / 1000);
+  const existing = await db.prepare('SELECT 1 AS ok FROM courier_profiles WHERE user_id=?').bind(user.id).first();
+  if (!existing) {
+    await db.batch([
+      db
+        .prepare('INSERT OR IGNORE INTO courier_profiles(user_id,slug,name) VALUES(?,?,?)')
+        .bind(user.id, user.id, user.fullName || 'Mensajero'),
+      db
+        .prepare(
+          `INSERT OR IGNORE INTO credit_wallets(user_id,permanence_seconds,settled_at,expires_at)
+           VALUES(?,0,?,?)`
+        )
+        .bind(user.id, nowSec, nowSec),
+      db
+        .prepare(
+          `INSERT OR IGNORE INTO credit_ledger(id,user_id,wallet,delta,balance_after,operation_id)
+           SELECT 'initial:'||user_id, user_id, 'permanence', 0, 0, 'initial'
+           FROM credit_wallets WHERE user_id=?`
+        )
+        .bind(user.id),
+      db
+        .prepare('INSERT OR IGNORE INTO shard_outbox(id,user_id,version) VALUES(?,?,1)')
+        .bind(`profile:${user.id}:1`, user.id),
+    ]);
+    // Prueba gratuita: una sola vez por cuenta (registro global en trial_claims).
+    if (!user.hasUsedTrial) {
+      await activateTrial(env, user.id).catch(() => null);
     }
   }
-
-  return { user: toSessionUser(user) };
+  // Alta completa: la asignación pasa a activa y la proyección queda fresca.
+  await env.D1_CORE
+    .prepare("UPDATE courier_shard_map SET status='active' WHERE user_id=? AND status='provisioning'")
+    .bind(user.id)
+    .run();
+  await syncProjection(env, user.id).catch(() => null);
 }
 
 // ─── PATCH /me ──────────────────────────────────────────────────────────────
@@ -138,7 +85,7 @@ export async function updateMe(request: Request, env: V2Env, body: Record<string
     const fullName = asString(body.fullName)?.trim() ?? '';
     if (!fullName) throw new HttpError(400, 'El nombre no puede estar vacío.');
     if (fullName.length > 80) throw new HttpError(400, 'El nombre es demasiado largo.');
-    patch.push('fullName=?');
+    patch.push('full_name=?');
     values.push(fullName);
   }
   if ('phone' in body) {
@@ -155,23 +102,48 @@ export async function updateMe(request: Request, env: V2Env, body: Record<string
   if ('avatarUrl' in body) {
     const avatar = body.avatarUrl;
     if (avatar === null || avatar === '') {
-      patch.push('avatarUrl=NULL');
+      patch.push('avatar_path=NULL');
     } else {
       const a = asString(avatar)?.trim() ?? '';
       if (a.length > 500) throw new HttpError(400, 'La URL del avatar es demasiado larga.');
-      patch.push('avatarUrl=?');
+      patch.push('avatar_path=?');
       values.push(a || null);
     }
   }
   if (patch.length === 0) throw new HttpError(400, 'Nada que actualizar.');
 
-  values.push(nowMs(), user.id);
-  await db.prepare(`UPDATE User SET ${patch.join(',')}, updatedAt=? WHERE id=?`).bind(...values).run();
-  const updated = await db.prepare('SELECT * FROM User WHERE id=?').bind(user.id).first();
-  return { user: toSessionUser(updated as unknown as Parameters<typeof toSessionUser>[0]) };
+  values.push(Math.floor(nowMs() / 1000), user.id);
+  await db.prepare(`UPDATE account_profiles SET ${patch.join(',')}, updated_at=? WHERE user_id=?`).bind(...values).run();
+
+  // Si es mensajero, el nombre/avatar viven también en la proyección pública:
+  // se versiona el perfil del shard y se reintenta la sincronización.
+  if (user.role === 'courier' && (patch.includes('full_name=?') || patch.includes('avatar_path=?'))) {
+    const shard = await assignedShard(env, user.id);
+    if (shard) {
+      const fresh = await loadAccount(env, user.id);
+      await shard.db
+        .prepare('UPDATE courier_profiles SET name=?, updated_at=unixepoch() WHERE user_id=?')
+        .bind(fresh?.fullName ?? 'Mensajero', user.id)
+        .run();
+      const version = await shard.db
+        .prepare('UPDATE courier_profiles SET version=version+1 WHERE user_id=? RETURNING version')
+        .bind(user.id)
+        .first<{ version: number }>();
+      if (version) {
+        await shard.db
+          .prepare('INSERT OR IGNORE INTO shard_outbox(id,user_id,version) VALUES(?,?,?)')
+          .bind(`profile:${user.id}:${version.version}`, user.id, version.version)
+          .run();
+        await syncProjection(env, user.id).catch(() => null);
+      }
+    }
+  }
+
+  const updated = await loadAccount(env, user.id);
+  return { user: toSessionUser(updated ?? user) };
 }
 
-// ─── POST /reports ──────────────────────────────────────────────────────────
+// ─── POST /reports (denuncia → shard del mensajero involucrado) ─────────────
 export async function createReport(request: Request, env: V2Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
   await checkRate(env, `report:${user.id}`, 10, 60 * 60_000);
@@ -185,406 +157,182 @@ export async function createReport(request: Request, env: V2Env, body: Record<st
   if (reason.length < 5 || reason.length > 500) {
     throw new HttpError(400, 'Describe el motivo del reporte (entre 5 y 500 caracteres).');
   }
-  await env.D1_CORE
-    .prepare('INSERT INTO ReportFlag(id,reporterId,targetType,targetId,reason,status,createdAt) VALUES(?,?,?,?,?,?,?)')
-    .bind(newId(), user.id, targetType, targetId, reason, 'open', nowMs())
+
+  // El shard dueño: el mensajero reportado (perfil), el dueño de la reseña o
+  // el mensajero de la conversación. Los datos operativos viven en su shard.
+  let courierId: string | null = null;
+  if (targetType === 'profile') {
+    courierId = targetId;
+  } else if (targetType === 'conversation') {
+    const conv = await env.D1_CORE
+      .prepare('SELECT courier_id AS courierId FROM conversations WHERE id=? LIMIT 1')
+      .bind(targetId)
+      .first<{ courierId: string }>();
+    courierId = conv?.courierId ?? null;
+  } else {
+    courierId = await findReviewOwner(env, targetId);
+  }
+  const shard = courierId ? await assignedShard(env, courierId) : null;
+  if (!shard) throw new HttpError(404, 'El elemento reportado no existe o ya no está disponible.');
+
+  await shard.db
+    .prepare(
+      `INSERT INTO report_flags(id,courier_id,reporter_id,target_type,target_id,reason,status,created_at)
+       VALUES(?,?,?,?,?,?,'open',?)`
+    )
+    .bind(newId(), courierId, user.id, targetType, targetId, reason, nowMs())
     .run();
   return { ok: true };
 }
 
-// ─── /favorites ─────────────────────────────────────────────────────────────
+/** Busca el dueño de una reseña entre los shards habilitados (acción rara). */
+async function findReviewOwner(env: V2Env, reviewId: string): Promise<string | null> {
+  const registry = await env.D1_CORE
+    .prepare('SELECT shard_id FROM shard_registry WHERE enabled=1')
+    .all();
+  for (const r of ((registry.results ?? []) as Array<{ shard_id: number }>)) {
+    const binding = `D1_SHARD_${String(r.shard_id).padStart(2, '0')}` as const;
+    const db = env[binding];
+    if (!db) continue;
+    const row = await db.prepare('SELECT courier_id AS courierId FROM reviews WHERE id=? LIMIT 1').bind(reviewId).first<{ courierId: string }>();
+    if (row) return row.courierId;
+  }
+  return null;
+}
+
+// ─── /favorites (cliente → mensajero, identidad global) ─────────────────────
 export async function listFavorites(request: Request, env: V2Env): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  const db = env.D1_CORE;
-  const favs = await db
+  const rows = await env.D1_CORE
     .prepare(
-      `SELECT f.createdAt, p.id, p.userId, p.verificationStatus, p.ratingAvg, p.ratingCount,
-       p.verifiedDeliveries, p.baseFeeCup, p.availabilityNote, p.vehicleSummary, p.coverageType, p.isDemo,
-       u.fullName, u.avatarUrl
-       FROM Favorite f
-       JOIN CourierProfile p ON p.id = f.courierId
-       JOIN User u ON u.id = p.userId
-       WHERE f.userId=? ORDER BY f.createdAt DESC`
+      `SELECT d.*, p.avatar_path AS avatarUrl FROM favorites f
+       JOIN public_courier_directory d ON d.user_id = f.courier_id
+       LEFT JOIN account_profiles p ON p.user_id = f.courier_id
+       WHERE f.user_id=? ORDER BY f.created_at DESC`
     )
     .bind(user.id)
     .all();
-
-  const couriers: Array<Record<string, unknown>> = [];
-  for (const f of (favs.results ?? []) as Array<Record<string, unknown>>) {
-    const routes = await db
-      .prepare(
-        `SELECT status, nextDepartureAt FROM Route WHERE courierId=? AND status IN ('active','scheduled')`
-      )
-      .bind(f.id as string)
-      .all();
+  const now = nowMs();
+  const couriers = ((rows.results ?? []) as Array<Record<string, unknown>>).map((d) => {
     let nextDeparture: number | null = null;
-    for (const r of (routes.results ?? []) as Array<{ nextDepartureAt: number | null }>) {
-      if (r.nextDepartureAt && r.nextDepartureAt > nowMs() && (!nextDeparture || r.nextDepartureAt < nextDeparture)) {
-        nextDeparture = r.nextDepartureAt;
+    try {
+      for (const r of JSON.parse((d.routes_json as string) || '[]') as Array<{ nextDepartureAt: number | null }>) {
+        if (r.nextDepartureAt && r.nextDepartureAt > now && (!nextDeparture || r.nextDepartureAt < nextDeparture)) {
+          nextDeparture = r.nextDepartureAt;
+        }
       }
+    } catch {
+      /* proyección sin rutas */
     }
-    const coverage = await db
-      .prepare('SELECT m.name FROM CourierCoverage cc JOIN Municipality m ON m.id=cc.municipalityId WHERE cc.courierId=?')
-      .bind(f.id as string)
-      .all();
-    couriers.push({
-      courierId: f.id,
-      userId: f.userId,
-      fullName: f.fullName,
-      avatarUrl: f.avatarUrl,
-      isVerified: f.verificationStatus === 'verified',
+    return {
+      courierId: d.user_id,
+      userId: d.user_id,
+      fullName: d.name,
+      avatarUrl: d.avatarUrl,
+      isVerified: d.is_verified === 1,
       isFavorite: true,
-      ratingAvg: f.ratingAvg,
-      ratingCount: f.ratingCount,
-      verifiedDeliveries: f.verifiedDeliveries,
-      vehicleSummary: f.vehicleSummary,
-      availabilityNote: f.availabilityNote,
-      feeCup: f.baseFeeCup,
-      isDemo: !!f.isDemo,
-      coverageType: f.coverageType,
+      ratingAvg: (d.review_count as number) > 0 ? (d.rating_sum as number) / (d.review_count as number) : 0,
+      ratingCount: d.review_count,
+      verifiedDeliveries: d.verified_deliveries,
+      vehicleSummary: d.vehicle_summary,
+      availabilityNote: d.availability_note,
+      feeCup: d.base_fee_cup,
+      isDemo: d.is_demo === 1,
+      coverageType: d.coverage_type,
       matchReasons: ['Guardado por ti'],
-      coverage: ((coverage.results ?? []) as Array<{ name: string }>).map((c) => c.name),
+      coverage: (d.coverage_csv as string) ? (d.coverage_csv as string).split(',').filter(Boolean) : [],
       nextDepartureAt: nextDeparture ? new Date(nextDeparture).toISOString() : null,
-    });
-  }
+    };
+  });
   return { couriers };
 }
 
 export async function toggleFavorite(request: Request, env: V2Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  const db = env.D1_CORE;
   const courierId = asString(body.courierId)?.trim() ?? '';
   if (!courierId) throw new HttpError(400, 'Falta el mensajero.');
-  const profile = await db.prepare('SELECT id FROM CourierProfile WHERE id=? LIMIT 1').bind(courierId).first();
-  if (!profile) throw new HttpError(404, 'Mensajero no encontrado.');
+  const exists = await env.D1_CORE
+    .prepare('SELECT 1 AS ok FROM public_courier_directory WHERE user_id=? LIMIT 1')
+    .bind(courierId)
+    .first();
+  if (!exists) throw new HttpError(404, 'Mensajero no encontrado.');
 
-  const existing = await db
-    .prepare('SELECT id FROM Favorite WHERE userId=? AND courierId=? LIMIT 1')
+  const existing = await env.D1_CORE
+    .prepare('SELECT 1 AS ok FROM favorites WHERE user_id=? AND courier_id=? LIMIT 1')
     .bind(user.id, courierId)
-    .first<{ id: string }>();
+    .first();
   if (existing) {
-    await db.prepare('DELETE FROM Favorite WHERE id=?').bind(existing.id).run();
+    await env.D1_CORE.prepare('DELETE FROM favorites WHERE user_id=? AND courier_id=?').bind(user.id, courierId).run();
     return { favorite: false };
   }
-  await db
-    .prepare('INSERT INTO Favorite(id,userId,courierId,createdAt) VALUES(?,?,?,?)')
-    .bind(newId(), user.id, courierId, nowMs())
+  await env.D1_CORE
+    .prepare('INSERT OR IGNORE INTO favorites(user_id,courier_id) VALUES(?,?)')
+    .bind(user.id, courierId)
     .run();
   return { favorite: true };
 }
 
-// ─── /saved-routes ──────────────────────────────────────────────────────────
-interface SavedRouteRow {
-  id: string;
-  originMunicipalityId: string;
-  destinationMunicipalityId: string;
-  label: string;
-  alertsEnabled: number;
-  createdAt: number;
-}
-
-async function savedRouteDto(env: V2Env, r: SavedRouteRow): Promise<Record<string, unknown>> {
-  const muns = await env.D1_CORE
-    .prepare('SELECT id, name FROM Municipality WHERE id IN (?,?)')
-    .bind(r.originMunicipalityId, r.destinationMunicipalityId)
-    .all();
-  const byId = new Map(((muns.results ?? []) as Array<{ id: string; name: string }>).map((m) => [m.id, m.name]));
-  return {
-    id: r.id,
-    originId: r.originMunicipalityId,
-    destinationId: r.destinationMunicipalityId,
-    origin: byId.get(r.originMunicipalityId) ?? '',
-    destination: byId.get(r.destinationMunicipalityId) ?? '',
-    label: r.label,
-    alertsEnabled: !!r.alertsEnabled,
-    createdAt: new Date(r.createdAt).toISOString(),
-  };
-}
-
+// ─── /saved-routes (datos del cliente, globales en CORE) ────────────────────
 export async function listSavedRoutes(request: Request, env: V2Env): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
   const rows = await env.D1_CORE
-    .prepare('SELECT * FROM SavedRoute WHERE userId=? ORDER BY createdAt DESC')
+    .prepare('SELECT * FROM saved_routes WHERE user_id=? ORDER BY created_at DESC')
     .bind(user.id)
     .all();
-  const routes: Array<Record<string, unknown>> = [];
-  for (const r of (rows.results ?? []) as unknown as SavedRouteRow[]) {
+  const routes = [];
+  for (const r of (rows.results ?? []) as Array<Record<string, unknown>>) {
     routes.push(await savedRouteDto(env, r));
   }
   return { routes };
 }
 
+async function savedRouteDto(env: V2Env, r: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const muns = await env.D1_CORE
+    .prepare('SELECT id, name FROM Municipality WHERE id IN (?,?)')
+    .bind(r.origin_municipality_id, r.destination_municipality_id)
+    .all();
+  const byId = new Map(((muns.results ?? []) as Array<{ id: string; name: string }>).map((m) => [m.id, m.name]));
+  return {
+    id: r.id,
+    originId: r.origin_municipality_id,
+    destinationId: r.destination_municipality_id,
+    origin: byId.get(r.origin_municipality_id as string) ?? '',
+    destination: byId.get(r.destination_municipality_id as string) ?? '',
+    label: r.label,
+    alertsEnabled: !!r.alerts_enabled,
+    createdAt: new Date((r.created_at as number) * 1000).toISOString(),
+  };
+}
+
 export async function createSavedRoute(request: Request, env: V2Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  const db = env.D1_CORE;
   const originId = asString(body.originId)?.trim() ?? '';
   const destinationId = asString(body.destinationId)?.trim() ?? '';
   const label = (asString(body.label) ?? '').trim().slice(0, 60);
   const alertsEnabled = asBool(body.alertsEnabled) ?? true;
 
   if (!originId || !destinationId) throw new HttpError(400, 'Selecciona origen y destino.');
-  if (originId === destinationId) {
-    throw new HttpError(400, 'El origen y el destino deben ser municipios distintos.');
-  }
-  const muns = await db.prepare('SELECT id FROM Municipality WHERE id IN (?,?)').bind(originId, destinationId).all();
+  if (originId === destinationId) throw new HttpError(400, 'El origen y el destino deben ser municipios distintos.');
+  const muns = await env.D1_CORE.prepare('SELECT id FROM Municipality WHERE id IN (?,?)').bind(originId, destinationId).all();
   if ((muns.results ?? []).length !== 2) throw new HttpError(400, 'Municipio no válido.');
 
   const id = newId();
-  await db
+  await env.D1_CORE
     .prepare(
-      'INSERT INTO SavedRoute(id,userId,originMunicipalityId,destinationMunicipalityId,label,alertsEnabled,createdAt) VALUES(?,?,?,?,?,?,?)'
+      'INSERT INTO saved_routes(id,user_id,origin_municipality_id,destination_municipality_id,label,alerts_enabled) VALUES(?,?,?,?,?,?)'
     )
-    .bind(id, user.id, originId, destinationId, label, alertsEnabled ? 1 : 0, nowMs())
+    .bind(id, user.id, originId, destinationId, label, alertsEnabled ? 1 : 0)
     .run();
-  const created = await db.prepare('SELECT * FROM SavedRoute WHERE id=?').bind(id).first() as unknown as SavedRouteRow;
+  const created = await env.D1_CORE.prepare('SELECT * FROM saved_routes WHERE id=?').bind(id).first() as unknown as Record<string, unknown>;
   return { route: await savedRouteDto(env, created) };
 }
 
 export async function deleteSavedRoute(request: Request, env: V2Env, id: string): Promise<Record<string, unknown>> {
   const { user } = await requireAuth(request, env);
-  const route = await env.D1_CORE.prepare('SELECT id, userId FROM SavedRoute WHERE id=? LIMIT 1').bind(id).first<{ id: string; userId: string }>();
-  if (!route || route.userId !== user.id) throw new HttpError(404, 'Ruta guardada no encontrada.');
-  await env.D1_CORE.prepare('DELETE FROM SavedRoute WHERE id=?').bind(id).run();
-  return { ok: true };
-}
-
-// ─── /conversations ─────────────────────────────────────────────────────────
-async function conversationDto(env: V2Env, conversationId: string, myUserId: string): Promise<Record<string, unknown>> {
-  const db = env.D1_CORE;
-  const c = await db
-    .prepare(
-      `SELECT c.id, c.clientId, c.courierId, c.lastMessageAt,
-       cu.fullName AS courierName, cu.avatarUrl AS courierAvatar, cu.role AS courierRole,
-       cl.fullName AS clientName, cl.avatarUrl AS clientAvatar, cl.role AS clientRole
-       FROM Conversation c
-       JOIN User cu ON cu.id = c.courierId
-       JOIN User cl ON cl.id = c.clientId
-       WHERE c.id = ? LIMIT 1`
-    )
-    .bind(conversationId)
-    .first<Record<string, unknown>>();
-  if (!c) throw new HttpError(404, 'Conversación no encontrada.');
-  const last = await db
-    .prepare('SELECT body FROM Message WHERE conversationId=? ORDER BY createdAt DESC LIMIT 1')
-    .bind(conversationId)
-    .first<{ body: string }>();
-  const unread = await db
-    .prepare('SELECT COUNT(*) AS n FROM Message WHERE conversationId=? AND senderId<>? AND readAt IS NULL')
-    .bind(conversationId, myUserId)
-    .first<{ n: number }>();
-  const mineAsClient = c.clientId === myUserId;
-  const other = mineAsClient
-    ? { id: c.courierId, name: c.courierName, avatar: c.courierAvatar, role: c.courierRole }
-    : { id: c.clientId, name: c.clientName, avatar: c.clientAvatar, role: c.clientRole };
-  return {
-    id: c.id,
-    otherId: other.id,
-    otherName: other.name,
-    otherAvatar: other.avatar,
-    otherRole: other.role,
-    lastMessage: last?.body ?? '',
-    lastMessageAt: new Date(c.lastMessageAt as number).toISOString(),
-    unread: unread?.n ?? 0,
-  };
-}
-
-export async function listConversations(request: Request, env: V2Env): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  const db = env.D1_CORE;
-  const convs = await db
-    .prepare(
-      `SELECT c.id, c.clientId, c.courierId, c.lastMessageAt,
-       cu.fullName AS courierName, cu.avatarUrl AS courierAvatar, cu.role AS courierRole,
-       cl.fullName AS clientName, cl.avatarUrl AS clientAvatar, cl.role AS clientRole
-       FROM Conversation c
-       JOIN User cu ON cu.id = c.courierId
-       JOIN User cl ON cl.id = c.clientId
-       WHERE c.clientId=? OR c.courierId=?
-       ORDER BY c.lastMessageAt DESC`
-    )
-    .bind(user.id, user.id)
-    .all();
-
-  const conversations: Array<Record<string, unknown>> = [];
-  for (const c of (convs.results ?? []) as Array<Record<string, unknown>>) {
-    const last = await db
-      .prepare('SELECT body FROM Message WHERE conversationId=? ORDER BY createdAt DESC LIMIT 1')
-      .bind(c.id as string)
-      .first<{ body: string }>();
-    const unread = await db
-      .prepare("SELECT COUNT(*) AS n FROM Message WHERE conversationId=? AND senderId<>? AND readAt IS NULL")
-      .bind(c.id as string, user.id)
-      .first<{ n: number }>();
-    const mineAsClient = c.clientId === user.id;
-    const other = mineAsClient
-      ? { id: c.courierId, name: c.courierName, avatar: c.courierAvatar, role: c.courierRole }
-      : { id: c.clientId, name: c.clientName, avatar: c.clientAvatar, role: c.clientRole };
-    conversations.push({
-      id: c.id,
-      otherId: other.id,
-      otherName: other.name,
-      otherAvatar: other.avatar,
-      otherRole: other.role,
-      lastMessage: last?.body ?? '',
-      lastMessageAt: new Date(c.lastMessageAt as number).toISOString(),
-      unread: unread?.n ?? 0,
-    });
-  }
-  return { conversations };
-}
-
-export async function startConversation(request: Request, env: V2Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  await checkRate(env, `conv:${user.id}`, 20, 60_000);
-  const db = env.D1_CORE;
-
-  const courierUserId = asString(body.courierUserId)?.trim() ?? '';
-  if (!courierUserId) throw new HttpError(400, 'Falta el destinatario.');
-  if (courierUserId === user.id) throw new HttpError(400, 'No puedes iniciar una conversación contigo mismo.');
-  const target = await db.prepare('SELECT id, role, status FROM User WHERE id=? LIMIT 1').bind(courierUserId).first<{ id: string; role: string; status: string }>();
-  if (!target || target.status !== 'active') throw new HttpError(404, 'Usuario no encontrado.');
-
-  // La conversación enlaza cliente ↔ mensajero: si el que inicia es el
-  // mensajero, se intercambian los papeles.
-  const isMeCourier = user.role === 'courier' && target.role !== 'courier';
-  const clientId = isMeCourier ? target.id : user.id;
-  const courierId = isMeCourier ? user.id : target.id;
-
-  const existing = await db
-    .prepare('SELECT id FROM Conversation WHERE clientId=? AND courierId=? LIMIT 1')
-    .bind(clientId, courierId)
-    .first<{ id: string }>();
-  if (existing) {
-    return { conversation: await conversationDto(env, existing.id, user.id) };
-  }
-
-  const id = newId();
-  const now = nowMs();
-  await db.batch([
-    db
-      .prepare('INSERT INTO Conversation(id,clientId,courierId,lastMessageAt,createdAt) VALUES(?,?,?,?,?)')
-      .bind(id, clientId, courierId, now, now),
-    db
-      .prepare(
-        "INSERT INTO Notification(id,userId,category,title,body,readAt,createdAt) VALUES(?,?,?,'Nueva conversación',?,NULL,?)"
-      )
-      .bind(newId(), courierUserId, 'mensaje', `${user.fullName} quiere coordinar contigo por MENRUT.`, now),
-  ]);
-  return { conversation: await conversationDto(env, id, user.id) };
-}
-
-// ─── /conversations/:id/messages ────────────────────────────────────────────
-async function loadConversationFor(env: V2Env, id: string, userId: string): Promise<{ id: string; clientId: string; courierId: string } | null> {
-  const conv = await env.D1_CORE
-    .prepare('SELECT id, clientId, courierId FROM Conversation WHERE id=? LIMIT 1')
-    .bind(id)
-    .first<{ id: string; clientId: string; courierId: string }>();
-  if (!conv) return null;
-  if (conv.clientId !== userId && conv.courierId !== userId) return null;
-  return conv;
-}
-
-export async function listMessages(request: Request, env: V2Env, conversationId: string): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  const db = env.D1_CORE;
-  const conv = await loadConversationFor(env, conversationId, user.id);
-  if (!conv) throw new HttpError(404, 'Conversación no encontrada.');
-
-  // Marcar como leídos los mensajes del otro participante.
-  await db
-    .prepare('UPDATE Message SET readAt=? WHERE conversationId=? AND senderId<>? AND readAt IS NULL')
-    .bind(nowMs(), conversationId, user.id)
+  const res = await env.D1_CORE
+    .prepare('DELETE FROM saved_routes WHERE id=? AND user_id=?')
+    .bind(id, user.id)
     .run();
-
-  const rows = await db
-    .prepare('SELECT * FROM Message WHERE conversationId=? ORDER BY createdAt ASC LIMIT 200')
-    .bind(conversationId)
-    .all();
-  return {
-    messages: ((rows.results ?? []) as Array<Record<string, unknown>>).map((m) =>
-      toMessageDto(
-        {
-          id: m.id as string,
-          conversationId: m.conversationId as string,
-          senderId: m.senderId as string,
-          body: m.body as string,
-          readAt: (m.readAt as number | null) ?? null,
-          createdAt: m.createdAt as number,
-        },
-        user.id,
-      ),
-    ),
-  };
-}
-
-export async function sendMessage(request: Request, env: V2Env, conversationId: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  await checkRate(env, `msg:${user.id}`, 60, 60_000);
-  const db = env.D1_CORE;
-
-  const conv = await loadConversationFor(env, conversationId, user.id);
-  if (!conv) throw new HttpError(404, 'Conversación no encontrada.');
-
-  const text = asString(body.body)?.trim() ?? '';
-  if (!text) throw new HttpError(400, 'El mensaje no puede estar vacío.');
-  if (text.length > 2000) throw new HttpError(400, 'El mensaje es demasiado largo (máx. 2000).');
-
-  const now = nowMs();
-  const id = newId();
-  await db.batch([
-    db
-      .prepare('INSERT INTO Message(id,conversationId,senderId,body,readAt,createdAt) VALUES(?,?,?,?,NULL,?)')
-      .bind(id, conversationId, user.id, text, now),
-    db.prepare('UPDATE Conversation SET lastMessageAt=? WHERE id=?').bind(now, conversationId),
-  ]);
-
-  // Notifica al otro solo si no tenía mensajes míos sin leer (evita spam).
-  const otherId = conv.clientId === user.id ? conv.courierId : conv.clientId;
-  const unreadFromMe = await db
-    .prepare('SELECT COUNT(*) AS n FROM Message WHERE conversationId=? AND senderId=? AND readAt IS NULL')
-    .bind(conversationId, user.id)
-    .first<{ n: number }>();
-  if ((unreadFromMe?.n ?? 0) <= 1) {
-    await db
-      .prepare(
-        "INSERT INTO Notification(id,userId,category,title,body,readAt,createdAt) VALUES(?,?,?,'Nuevo mensaje',?,NULL,?)"
-      )
-      .bind(newId(), otherId, 'mensaje', `${user.fullName}: ${text.slice(0, 90)}${text.length > 90 ? '…' : ''}`, now)
-      .run();
-  }
-
-  return {
-    message: toMessageDto(
-      { id, conversationId, senderId: user.id, body: text, readAt: null, createdAt: now },
-      user.id,
-    ),
-  };
-}
-
-// ─── /notifications ─────────────────────────────────────────────────────────
-export async function listNotifications(request: Request, env: V2Env): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  const rows = await env.D1_CORE
-    .prepare('SELECT * FROM Notification WHERE userId=? ORDER BY createdAt DESC LIMIT 50')
-    .bind(user.id)
-    .all();
-  return { notifications: ((rows.results ?? []) as Array<Record<string, unknown>>).map((n) => toNotificationDto({
-    id: n.id as string,
-    category: n.category as string,
-    title: n.title as string,
-    body: n.body as string,
-    readAt: (n.readAt as number | null) ?? null,
-    createdAt: n.createdAt as number,
-  })) };
-}
-
-export async function markNotificationRead(request: Request, env: V2Env, id: string): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  const db = env.D1_CORE;
-  const notification = await db.prepare('SELECT id, userId, readAt FROM Notification WHERE id=? LIMIT 1').bind(id).first<{ id: string; userId: string; readAt: number | null }>();
-  if (!notification || notification.userId !== user.id) throw new HttpError(404, 'Notificación no encontrada.');
-  if (!notification.readAt) {
-    await db.prepare('UPDATE Notification SET readAt=? WHERE id=?').bind(nowMs(), id).run();
-  }
+  if (!res.meta.changes) throw new HttpError(404, 'Ruta guardada no encontrada.');
   return { ok: true };
 }

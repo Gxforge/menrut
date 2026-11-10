@@ -40,6 +40,7 @@ import AdminToolsScreen from '@/components/menrut/screens/admin/AdminToolsScreen
 import AdminModerationScreen from '@/components/menrut/screens/admin/AdminModerationScreen'
 import AdminSettingsScreen from '@/components/menrut/screens/admin/AdminSettingsScreen'
 import AdminSystemScreen from '@/components/menrut/screens/admin/AdminSystemScreen'
+import AdminDatabasesScreen from '@/components/menrut/screens/admin/AdminDatabasesScreen'
 
 export function AppRouter() {
   const screen = useAppStore((s) => s.screen)
@@ -80,6 +81,7 @@ export function AppRouter() {
     case 'admin-moderation': return <AdminModerationScreen />
     case 'admin-settings': return <AdminSettingsScreen />
     case 'admin-system': return <AdminSystemScreen />
+    case 'admin-databases': return <AdminDatabasesScreen />
     default: return <HomeScreen />
   }
 }
