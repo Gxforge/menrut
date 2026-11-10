@@ -33,7 +33,6 @@
 - **Repo público** (decisión del propietario para minutos ilimitados de GitHub Actions); volver a privado cuando esté en producción.
 
 ## Pendiente
-- **Confirmar recepción del correo** de recuperación en la bandeja del propietario (envío verificado HTTP 200).
 - Retirar/etiquetar los 11 mensajeros demo antes de lanzar reales (insignia «demostración» ya visible).
 - Recuperación ensayada de shards (backup/restore documentado y probado en frío).
 - Volver el repo a privado al pasar a producción real (decisión del propietario).
@@ -47,3 +46,8 @@
 
 ## Variables
 Sin cambios en producción. Nuevas variables preparadas: `CRON_SECRET` (Pages + worker reconciler; ya generada en `.cron-secret`, ignorada por git) e `IS_SANDBOX` (opcional, solo para entornos de pruebas con el secundario). Ningún secreto en Git.
+
+## Post-despliegue (mismo día)
+- **Correo del propietario CONFIRMADO por recepción** (los mensajes de Gmail llegan: prueba SMTP cerrada de punta a punta).
+- **Incidencia corregida**: el primer deploy de fase 2 se compiló en un clon sin `web/.env`, así que el bundle quedó SIN `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` inlineadas → error «Supabase no configurado» al arrancar. Recuperada la clave pública de `menrut-principal` (API de gestión, `/v1/projects/{ref}/api-keys`), recreado `web/.env` (chmod 600, gitignored) y redesplegado. Verificado en navegador real: arranque sin errores, service worker registrado, manifest enlazado, aviso «Instalar» (beforeinstallprompt), pasaporte con datos del shard.
+- **Lección para futuros clones**: tras clonar el repo en una máquina nueva, recrear SIEMPRE `web/.env` (URL + clave pública de Supabase) antes de `npm run build`, porque las `NEXT_PUBLIC_*` se inlinean al compilar y no viajan en git.
