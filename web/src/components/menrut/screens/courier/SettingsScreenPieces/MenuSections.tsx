@@ -4,6 +4,7 @@
 
 import {
   ChevronRight, IdCard, LifeBuoy, FileText, Info, Lock, LogOut, ShieldCheck, PackageCheck,
+  ExternalLink, Sparkles,
 } from 'lucide-react'
 
 // Fila reutilizable (icono + título + subtítulo + chevron).
@@ -149,6 +150,30 @@ export function AboutSection({ onTerminosOpen, onPrivacidad }: { onTerminosOpen:
           onClick={onPrivacidad}
         />
       </div>
+      <CreditCard />
     </section>
+  )
+}
+
+// Crédito del estudio que desarrolla la app. Abre su sitio en una pestaña nueva.
+function CreditCard() {
+  return (
+    <a
+      href="https://studiolexair.ddns.net"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Creado por Studio Lexair, desarrollo digital. Abre el sitio del estudio en una pestaña nueva."
+      className="mt-3 flex items-center gap-3 rounded-2xl border border-blue/30 bg-deep px-4 py-3.5 text-white no-underline"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan/15 text-cyan">
+        <Sparkles className="h-[18px] w-[18px]" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[11px] font-semibold text-cyan">Creado por Studio Lexair · Desarrollo digital</span>
+        <span className="block text-[13px] font-semibold leading-snug">MenRut es un proyecto de Studio Lexair</span>
+        <span className="block text-[11.5px] text-white/70">Sitios web, catálogos digitales y aplicaciones a medida</span>
+      </span>
+      <ExternalLink className="h-4 w-4 shrink-0 text-white/70" aria-hidden />
+    </a>
   )
 }

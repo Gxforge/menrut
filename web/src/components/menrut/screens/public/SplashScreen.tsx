@@ -15,6 +15,9 @@ export default function SplashScreen() {
   const resetTo = useAppStore((s) => s.resetTo)
 
   useEffect(() => {
+    // Enlace directo del staff: /?admin. Sin sesión, pasa por el inicio de sesión.
+    // El permiso real lo comprueba el backend; esto solo decide a qué pantalla se entra.
+    const wantsAdmin = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('admin')
     const target = session
       ? session.role === 'courier'
         ? 'courier-home'
@@ -23,7 +26,7 @@ export default function SplashScreen() {
           : session.role === 'moderator'
             ? 'admin-moderation'
             : 'home'
-      : 'home'
+      : wantsAdmin ? 'login' : 'home'
     const t = setTimeout(() => {
       if (useAppStore.getState().screen === 'splash') {
         // El primer avance limpia el historial; luego la navegación es normal

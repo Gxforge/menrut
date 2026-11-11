@@ -3,11 +3,12 @@
 round-robin de menrut-core con su tamaño real medido (igual que
 measure_shards.py). Al terminar: 10 bases D1 operativas (core + 9 shards)."""
 import json
+import os
 import time
 import urllib.request
 
 ACC = "665fb2e43961e57d2f22283c6dec7d5c"
-TOK = "cfat_MtxUC1svXHUvPsQNaWYrKjWxEvONBFIZTnBbRoAMdd01628b"
+TOK = os.environ.get("CLOUDFLARE_API_TOKEN", "")  # nunca escribir el token en el código
 CORE = "3383e764-c3a3-40d9-aa71-38f07cfb205a"
 SHARDS = {
     1: "abd5f4a5-36ae-499b-bad0-96a41250bb0f",
