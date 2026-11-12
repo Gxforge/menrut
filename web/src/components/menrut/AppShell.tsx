@@ -6,6 +6,7 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore, ADMIN_SCREENS } from '@/lib/store'
 import { useSessionBootstrap } from '@/components/menrut/hooks'
+import { isPasswordRecovery } from '@/lib/recovery'
 import { AppRouter } from './AppRouter'
 import { BottomNav } from './core/BottomNav'
 import { PwaSetup } from './core/PwaSetup'
@@ -52,6 +53,13 @@ export default function AppShell() {
     if (!ready) return
     const s = useAppStore.getState()
     const cur = s.screen
+
+    // Recuperación pendiente: el usuario solo puede fijar su contraseña nueva
+    // (la sesión temporal del enlace no debe abrir la app todavía)
+    if (isPasswordRecovery()) {
+      if (cur !== 'recovery') s.resetTo('recovery')
+      return
+    }
 
     // Con sesión activa, no volver a pantallas de acceso
     if (s.session && ['login', 'register', 'recovery'].includes(cur)) {

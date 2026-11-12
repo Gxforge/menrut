@@ -2,6 +2,7 @@
 // El anon key es público por diseño; la seguridad real está en RLS y en el
 // backend, que valida el JWT con service_role (nunca expuesto al cliente).
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { markPasswordRecovery } from './recovery'
 
 let client: SupabaseClient | null = null
 
@@ -16,8 +17,14 @@ export function getSupabase(): SupabaseClient {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false,
+      // Necesario para el enlace de recuperación: Supabase devuelve la sesión
+      // temporal en la URL y la app debe leerla para permitir fijar la contraseña.
+      detectSessionInUrl: true,
     },
+  })
+  // Al abrir el enlace del correo, marcamos la recuperación pendiente.
+  client.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') markPasswordRecovery()
   })
   return client
 }

@@ -10,8 +10,9 @@
 //   · La cuenta de autenticación (Supabase) se elimina con service_role
 //     (best-effort: si falla, la cuenta ya está inactiva localmente).
 // Todo queda registrado en audit_events.
+// Las cuentas de personal (owner/admin/moderator) NO se pueden eliminar: 403 antes de cualquier cambio.
 import { asString, audit, HttpError, nowMs, type V2Env } from './core';
-import { requireAuth } from './identity';
+import { requireAuth, staffRoleFor } from './identity';
 import { assignedShard, syncProjection } from './shard';
 
 /** ─── DELETE /me — eliminar mi cuenta ──────────────────────────────────── */
@@ -20,6 +21,11 @@ export async function deleteMe(request: Request, env: V2Env, body: Record<string
   const confirm = asString(body.confirm) ?? '';
   if (confirm !== 'BORRAR') {
     throw new HttpError(400, 'Confirmación requerida: escribe BORRAR para eliminar tu cuenta.');
+  }
+  // Cuentas de personal (propietario, administración, moderación): no se pueden eliminar.
+  // La comprobación va antes de cualquier cambio. Se aplica por rol de la base y por las listas del entorno.
+  if (staffRoleFor(env, user.email) || ['owner', 'admin', 'moderator'].includes(user.role)) {
+    throw new HttpError(403, 'Las cuentas de propietario, administración y moderación no se pueden eliminar.');
   }
   const db = env.D1_CORE;
   const nowSec = Math.floor(nowMs() / 1000);
