@@ -21,14 +21,17 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
 - La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
 
+## Versión 2.0.6
+
+**Para los mensajeros**
+- Corregido: al indicar tu municipio base, tu perfil se guarda en el directorio público.
+- Corregido: con tipo **Zona**, tu municipio base cuenta como cobertura. Apareces en **«De mi zona»** y en **«Mensajeros cercanos»** de tu municipio.
+
 ## Versión 2.0.5
 
 **Para todos**
 - Al haber una versión nueva aparece un **cartel centrado** «Actualizando MENRUT» (antes era una franja arriba).
 - El cartel **aparece una sola vez** por versión. Si la actualización no es obligatoria, puedes pulsar «Más tarde».
-
-**Para los mensajeros**
-- Corregido: al indicar tu municipio base, tu perfil ahora aparece en **«De mi zona»** y en **«Mensajeros cercanos»** (antes quedaba sin municipio en el directorio público).
 
 ## Versión 2.0.4
 

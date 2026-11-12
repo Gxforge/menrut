@@ -91,6 +91,7 @@ export async function loadPublicProfiles(env: V2Env): Promise<SearchProfile[]> {
     availabilityNote: (d.availability_note as string) ?? '',
     vehicleSummary: (d.vehicle_summary as string) ?? '',
     coverageType: (d.coverage_type as string) ?? 'municipal',
+    municipalityId: (d.municipality_id as string | null) ?? null,
     isDemo: (d.is_demo as number) ?? 0,
     highlightedUntil: (d.highlighted_until as number) ?? 0,
     services: ((d.services_csv as string) ?? '').split(',').filter(Boolean),

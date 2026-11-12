@@ -16,6 +16,8 @@ export interface SearchProfile {
   availabilityNote: string;
   vehicleSummary: string;
   coverageType: string;
+  // Municipio base declarado (directorio). Un mensajero de zona trabaja dentro de él.
+  municipalityId?: string | null;
   isDemo: number;
   highlightedUntil: number;
   services: string[];
@@ -133,7 +135,13 @@ export function computeMatch(
   }
 
   if (originId || destinationId) {
+    // Zona: su municipio base cuenta como cobertura (no tiene lista de municipios).
+    const baseIsZone =
+      p.coverageType === 'zone' &&
+      !!p.municipalityId &&
+      (p.municipalityId === originId || p.municipalityId === destinationId);
     if (
+      baseIsZone ||
       (originId && p.coverage.some((c) => c.municipalityId === originId)) ||
       (destinationId && p.coverage.some((c) => c.municipalityId === destinationId))
     ) {
