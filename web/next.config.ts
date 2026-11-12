@@ -15,7 +15,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  ...(isStaticExport ? { output: "export" as const, images: { unoptimized: true } } : {}),
+  // trailingSlash: cada ruta genera su index.html (app/index.html para /app/).
+  ...(isStaticExport ? { output: "export" as const, trailingSlash: true, images: { unoptimized: true } } : {}),
 };
 
 export default nextConfig;

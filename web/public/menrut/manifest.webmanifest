@@ -3,14 +3,18 @@
   "short_name": "MENRUT",
   "description": "Encuentra mensajeros que cubran tu ruta en Cuba. Clientes, mensajeros y negocios conectados por rutas y confianza.",
   "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/app/",
+  "scope": "/app/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#071d43",
   "theme_color": "#0b2b60",
   "lang": "es",
-  "categories": ["travel", "navigation", "business"],
+  "categories": [
+    "travel",
+    "navigation",
+    "business"
+  ],
   "icons": [
     {
       "src": "/menrut/icons/icon-192.png",

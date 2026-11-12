@@ -21,6 +21,12 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
 - La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
 
+## Versión 2.1.0
+
+**Para todos**
+- Nueva **portada oficial** en `menrut.ddns.net/`: qué es MENRUT, cómo funciona, para mensajeros, para negocios, seguridad y preguntas frecuentes.
+- La aplicación se abre en **`/app/`**. Los enlaces de recuperación de contraseña, el acceso del staff (`/admin`) y la app instalada siguen funcionando.
+
 ## Versión 2.0.6
 
 **Para los mensajeros**

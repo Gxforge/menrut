@@ -1,1 +1,5 @@
-/admin  /  200
+# Rutas de la aplicación (la portada es "/"; la app vive en /app/).
+# Las rutas antiguas se reescriben a la app sin cambiar la URL del navegador.
+/app/*  /app/  200
+/admin  /app/  200
+/cuenta  /app/  200
