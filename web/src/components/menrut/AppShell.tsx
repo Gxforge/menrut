@@ -10,6 +10,7 @@ import { isPasswordRecovery } from '@/lib/recovery'
 import { AppRouter } from './AppRouter'
 import { BottomNav } from './core/BottomNav'
 import { PwaSetup } from './core/PwaSetup'
+import { UpdateGate } from './core/UpdateGate'
 import type { Role, ScreenId } from '@/lib/types'
 
 // Pantallas navegables como visitante (funciones públicas): la app abre en
@@ -86,6 +87,7 @@ export default function AppShell() {
         </main>
         <BottomNav />
         <PwaSetup />
+        <UpdateGate />
       </div>
     </div>
   )

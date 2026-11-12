@@ -2,6 +2,7 @@
 // ayuda y acerca de (filas que abren pantallas o diálogos).
 'use client'
 
+import { APP_VERSION_LABEL } from '@/lib/app-version'
 import {
   ChevronRight, IdCard, LifeBuoy, FileText, Info, Lock, LogOut, ShieldCheck, PackageCheck,
   ExternalLink, Sparkles,
@@ -132,7 +133,7 @@ export function AboutSection({ onTerminosOpen, onPrivacidad }: { onTerminosOpen:
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] font-semibold leading-tight">MENRUT</p>
-            <p className="text-[11.5px] text-muted-foreground">Conectamos caminos. · Versión 1.0.0-dev</p>
+            <p className="text-[11.5px] text-muted-foreground">Conectamos caminos. · {APP_VERSION_LABEL}</p>
           </div>
         </div>
         <Row

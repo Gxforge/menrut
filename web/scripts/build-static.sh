@@ -68,9 +68,18 @@ elif [ -e "$WORK/src/middleware.js" ]; then
 fi
 
 cd "$WORK"
+# Versión visible y compilación única (aviso de actualización en la app).
+APP_VERSION="$(node -p "require('$SRC/package.json').version")"
+APP_BUILD="$(git -C "$SRC" rev-parse --short HEAD 2>/dev/null || echo local)-$(date -u +%Y%m%d%H%M)"
+APP_UPDATE_MANDATORY="${APP_UPDATE_MANDATORY:-true}"
+export NEXT_PUBLIC_APP_VERSION="$APP_VERSION" NEXT_PUBLIC_APP_BUILD="$APP_BUILD"
+
 EXPORT_STATIC=1 NEXT_PUBLIC_API_BASE=/api/v2 bunx next build
 rm -rf "$OUT"
 cp -r "$WORK/out" "$OUT"
+# version.json: lo consulta la app para detectar una compilación nueva (nunca cacheado).
+printf '{"version":"%s","build":"%s","mandatory":%s}\n' "$APP_VERSION" "$APP_BUILD" "$APP_UPDATE_MANDATORY" > "$OUT/version.json"
+echo "Versión: $APP_VERSION · compilación: $APP_BUILD · obligatoria: $APP_UPDATE_MANDATORY"
 
 # ─── Verificaciones ─────────────────────────────────────────────────────────
 test -f "$OUT/index.html" || { echo "ERROR: falta \$OUT/index.html" >&2; exit 1; }

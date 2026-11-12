@@ -35,11 +35,14 @@ CREATE TABLE IF NOT EXISTS launch_promo_claims (
   granted_at      INTEGER
 );
 
+-- Cupos 1..10 generados con CTE recursivo (D1 limita los términos de UNION ALL).
+WITH RECURSIVE seq(n) AS (
+  SELECT 1
+  UNION ALL
+  SELECT n + 1 FROM seq WHERE n < 10
+)
 INSERT OR IGNORE INTO launch_promo_slots (municipality_id, seq, kind)
-SELECT m.id, s.seq,
-       CASE WHEN s.seq BETWEEN 2 AND 4 THEN 'free_2m' ELSE 'free_1m' END
+SELECT m.id, s.n,
+       CASE WHEN s.n BETWEEN 2 AND 4 THEN 'free_2m' ELSE 'free_1m' END
 FROM Municipality m
-CROSS JOIN (
-  SELECT 1 AS seq UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5
-  UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10
-) s;
+CROSS JOIN seq s;
