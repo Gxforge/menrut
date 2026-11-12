@@ -101,10 +101,11 @@ export const api = {
       body: JSON.stringify({ courierId }),
     }),
 
-  // Valorar/comentar a un mensajero (requiere sesión). Si se pasa deliveryId
-  // de una entrega verificada por OTP, la opinión queda marcada «verificada».
+  // Valorar/comentar a un mensajero (requiere sesión). Una opinión por usuario:
+  // si ya existe, se sustituye (updated=true). Si se pasa deliveryId de una
+  // entrega verificada por OTP, la opinión queda marcada «verificada».
   submitReview: (courierId: string, rating: number, comment: string, deliveryId?: string) =>
-    req<{ review: ReviewDto; ratingAvg: number; ratingCount: number }>(`/couriers/${courierId}/reviews`, {
+    req<{ review: ReviewDto; updated: boolean; ratingAvg: number; ratingCount: number }>(`/couriers/${courierId}/reviews`, {
       method: 'POST',
       body: JSON.stringify({ rating, comment, ...(deliveryId ? { deliveryId } : {}) }),
     }),

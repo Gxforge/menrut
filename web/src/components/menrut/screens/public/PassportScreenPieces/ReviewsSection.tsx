@@ -12,6 +12,7 @@ export function ReviewsSection({
   totalReviews,
   ratingCount,
   canRate,
+  hasMine = false,
   ownerFirstName,
   showAllToggle,
   onShowAll,
@@ -21,6 +22,7 @@ export function ReviewsSection({
   totalReviews: number
   ratingCount: number
   canRate: boolean
+  hasMine?: boolean
   ownerFirstName: string
   showAllToggle: boolean
   onShowAll: () => void
@@ -39,7 +41,7 @@ export function ReviewsSection({
               className="inline-flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1.5 text-[12px] font-bold text-orange ring-1 ring-orange/25 transition-transform active:scale-95"
             >
               <Star className="h-3.5 w-3.5" aria-hidden />
-              Valorar
+              {hasMine ? 'Editar valoración' : 'Valorar'}
             </button>
           )}
         </div>

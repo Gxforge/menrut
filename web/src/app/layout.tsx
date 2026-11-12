@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { AppProtection } from "@/components/AppProtection";
 
 // preload: false — la app se pinta en el cliente; el título (Manrope) aparece
 // después de hidratar y el navegador avisaba de precargas sin usar.
@@ -57,6 +58,7 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} ${inter.variable} antialiased bg-background text-foreground`}
       >
+        <AppProtection />
         {children}
         <Toaster position="top-center" richColors />
       </body>

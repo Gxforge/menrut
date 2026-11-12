@@ -109,8 +109,8 @@ export default function PassportScreen() {
   const reviewMut = useMutation({
     mutationFn: (input: { courierId: string; rating: number; comment: string; deliveryId?: string }) =>
       api.submitReview(input.courierId, input.rating, input.comment, input.deliveryId),
-    onSuccess: () => {
-      toast.success('¡Gracias! Tu opinión se publicó.')
+    onSuccess: (d) => {
+      toast.success(d.updated ? 'Tu valoración se actualizó.' : '¡Gracias! Tu opinión se publicó.')
       setReviewOpen(false)
       setReviewRating(0)
       setReviewComment('')
@@ -128,8 +128,9 @@ export default function PassportScreen() {
       navigate('register')
       return
     }
-    setReviewRating(0)
-    setReviewComment('')
+    const mine = passportQuery.data?.myReview
+    setReviewRating(mine?.rating ?? 0)
+    setReviewComment(mine?.comment ?? '')
     setReviewOpen(true)
   }
 
@@ -219,6 +220,7 @@ export default function PassportScreen() {
           totalReviews={p.reviews.length}
           ratingCount={p.ratingCount}
           canRate={session?.id !== p.userId}
+          hasMine={!!p.myReview}
           ownerFirstName={p.fullName.split(' ')[0]}
           showAllToggle={p.reviews.length > 3 && !showAllReviews}
           onShowAll={() => setShowAllReviews(true)}
@@ -273,6 +275,7 @@ export default function PassportScreen() {
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         firstName={p.fullName.split(' ')[0]}
+        editing={!!p.myReview}
         rating={reviewRating}
         onRatingChange={setReviewRating}
         comment={reviewComment}

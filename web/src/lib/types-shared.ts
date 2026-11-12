@@ -133,6 +133,8 @@ export interface PassportDto {
   coverage: string[]
   routes: RouteDto[]
   reviews: ReviewDto[]
+  /** Opinión propia del visitante (si la hay): se edita en vez de crear otra. */
+  myReview?: ReviewDto | null
   isDemo: boolean
 }
 

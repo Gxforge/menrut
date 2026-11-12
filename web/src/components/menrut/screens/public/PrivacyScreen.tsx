@@ -1,8 +1,5 @@
-// MENRUT — Privacidad y términos (política definitiva).
-// Qué datos tratamos, dónde viven, cuánto tiempo se conservan, derechos del
-// titular (acceso, rectificación, supresión) y eliminación de la cuenta
-// (DELETE /me: anonimiza identidad, borra datos personales, oculta el
-// pasaporte si es mensajero y elimina la cuenta de autenticación).
+// MENRUT — Privacidad y datos (texto en lenguaje sencillo, sin detalles técnicos).
+// Debe coincidir con la página pública /privacidad/.
 'use client'
 
 import { useState } from 'react'
@@ -19,6 +16,8 @@ import { Input } from '@/components/ui/input'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+
+const SUPPORT_EMAIL = 'studio.lexair@gmail.com'
 
 export default function PrivacyScreen() {
   const session = useAppStore((s) => s.session)
@@ -45,47 +44,47 @@ export default function PrivacyScreen() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <TopBar title="Privacidad y datos" subtitle="Cómo tratamos tu información" onBack={back} />
+      <TopBar title="Privacidad y datos" subtitle="Qué datos usamos y cómo los cuidamos" onBack={back} />
 
       <main className="flex-1 space-y-4 px-4 pb-8 pt-4">
         <Section
           icon={<ShieldCheck className="h-5 w-5" aria-hidden />}
-          title="Qué datos tratamos"
+          title="Qué datos usamos"
           items={[
-            'Cuenta: nombre, correo y (opcional) teléfono y foto. El correo nunca se muestra públicamente.',
-            'Mensajeros: perfil profesional (bio, vehículos, tarifas, rutas y cobertura) publicado en el directorio.',
-            'Actividad: favoritos, rutas guardadas, conversaciones, opiniones y entregas verificadas.',
-            'Pagos Transfermóvil: comprobante y estado de aprobación, visibles solo para el equipo de MENRUT.',
+            'Tu cuenta: nombre, correo y, si quieres, teléfono y foto. Tu correo nunca se muestra a otros usuarios.',
+            'Si eres mensajero: tu perfil (descripción, vehículo, tarifas, zona y rutas) que ven los clientes.',
+            'Tu actividad: favoritos, rutas guardadas, mensajes, valoraciones y entregas confirmadas.',
+            'Pagos: el comprobante y si ya fue aprobado. Solo los ve el equipo de MENRUT.',
           ]}
         />
         <Section
           icon={<Database className="h-5 w-5" aria-hidden />}
-          title="Dónde viven tus datos"
+          title="Cómo los protegemos"
           items={[
-            'Identidad y autenticación: Supabase (menrut-principal, único entorno de producción).',
-            'Directorio y datos operativos: bases D1 de Cloudflare (1 núcleo + 9 particiones).',
-            'Fotos: almacenamiento privado con enlaces firmados temporales; nunca datos binarios en las bases.',
-            'Ningún dato se vende ni se comparte con terceros con fines publicitarios.',
+            'Las fotos de verificación son privadas y solo se abren con enlaces temporales.',
+            'MENRUT no usa tu ubicación del teléfono: el municipio lo eliges tú.',
+            'No usamos herramientas de publicidad ni de rastreo de terceros.',
+            'Ningún dato se vende ni se comparte con fines publicitarios.',
           ]}
         />
         <Section
           icon={<Clock className="h-5 w-5" aria-hidden />}
-          title="Cuánto tiempo se conservan"
+          title="Cuánto tiempo los guardamos"
           items={[
-            'Cuenta y actividad: mientras la cuenta esté activa.',
-            'Conversaciones: hasta que elimines tu cuenta (o borres la conversación).',
-            'Asientos contables (créditos y pagos): se conservan anonimizados por obligación contable, sin datos personales.',
-            'Registros de seguridad (auditoría y denuncias): hasta 12 meses, solo para moderación.',
+            'Tu cuenta y tu actividad: mientras la cuenta esté activa.',
+            'Mensajes: hasta que elimines tu cuenta o borres la conversación.',
+            'Registros de pagos: sin datos personales, por obligación contable.',
+            'Registros de seguridad (denuncias y moderación): hasta 12 meses.',
           ]}
         />
         <Section
           icon={<UserCheck className="h-5 w-5" aria-hidden />}
           title="Tus derechos"
           items={[
-            'Acceso y rectificación: edita tu perfil desde la app en cualquier momento.',
-            'Supresión: botón «Eliminar mi cuenta» abajo; es inmediato e irreversible.',
-            'Portabilidad: solicita una copia de tus datos escribiendo al soporte desde Mensajes.',
-            'Reclamación: puedes denunciar conductas o datos indebidos desde cualquier perfil o conversación.',
+            'Ver y cambiar tus datos: desde tu perfil, en cualquier momento.',
+            'Eliminar tu cuenta: con el botón de abajo. Es inmediato e irreversible.',
+            `Pedir una copia de tus datos: escribe a ${SUPPORT_EMAIL}.`,
+            'Denunciar: desde cualquier perfil u opinión.',
           ]}
         />
 
@@ -95,9 +94,9 @@ export default function PrivacyScreen() {
             Términos de uso (resumen)
           </h2>
           <ul className="mt-2.5 space-y-2 text-[12.5px] leading-relaxed text-muted-foreground">
-            <li>· MENRUT es un directorio: conecta clientes y mensajeros; no gestiona pagos entre partes ni es responsable de los acuerdos entre usuarios.</li>
-            <li>· Los mensajeros de demostración se muestran con insignia visible y nunca se presentan como reales.</li>
-            <li>· Contenido ofensivo o fraudulento se modera con las denuncias de la comunidad.</li>
+            <li>· MENRUT conecta a clientes con mensajeros. No cobra ni gestiona los pagos entre ustedes y no responde por los acuerdos entre usuarios.</li>
+            <li>· Las cuentas de demostración llevan una insignia visible y nunca se presentan como reales.</li>
+            <li>· El contenido ofensivo o fraudulento se revisa con las denuncias de la comunidad.</li>
           </ul>
         </section>
 
@@ -108,9 +107,9 @@ export default function PrivacyScreen() {
               Zona sensible
             </h2>
             <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
-              Eliminar tu cuenta borra tus datos personales (perfil, favoritos, rutas
-              guardadas, conversaciones y notificaciones), oculta tu pasaporte si eres
-              mensajero y cierra tu acceso. Es irreversible.
+              Al eliminar tu cuenta se borran tus datos personales, tus favoritos, tus
+              rutas guardadas, tus mensajes y tus avisos. Si eres mensajero, tu perfil
+              deja de aparecer. Es irreversible.
             </p>
             <Button
               variant="outline"

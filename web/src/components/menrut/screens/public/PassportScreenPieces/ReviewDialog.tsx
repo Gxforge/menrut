@@ -11,6 +11,7 @@ export function ReviewDialog({
   open,
   onOpenChange,
   firstName,
+  editing = false,
   rating,
   onRatingChange,
   comment,
@@ -24,6 +25,7 @@ export function ReviewDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   firstName: string
+  editing?: boolean
   rating: number
   onRatingChange: (r: number) => void
   comment: string
@@ -38,7 +40,7 @@ export function ReviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[380px] rounded-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display">Valorar a {firstName}</DialogTitle>
+          <DialogTitle className="font-display">{editing ? `Tu valoración de ${firstName}` : `Valorar a ${firstName}`}</DialogTitle>
           <DialogDescription>
             Tu opinión ayuda a otros clientes a elegir bien. Puedes actualizarla cuando quieras.
           </DialogDescription>
@@ -125,7 +127,7 @@ export function ReviewDialog({
             onClick={onSubmit}
           >
             {pending && <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden />}
-            Publicar opinión
+            {editing ? 'Guardar cambios' : 'Publicar opinión'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -55,7 +55,7 @@ export default function Privacidad() {
       <ul>
         <li><b>Otros usuarios:</b> en el perfil público de un mensajero se ve su nombre, municipio base, cobertura, servicios, rutas publicadas, valoración y estado de verificación. No se muestran correo ni teléfono.</li>
         <li><b>Equipo de MENRUT:</b> el personal autorizado puede ver los datos necesarios para verificar cuentas, revisar pagos y atender reportes.</li>
-        <li><b>Proveedores técnicos:</b> usamos Supabase para la autenticación y el envío de correos de cuenta, y Cloudflare para alojar la aplicación y guardar los datos.</li>
+        <li><b>Servicios técnicos:</b> algunos servicios de terceros que la aplicación necesita para funcionar, como el alojamiento y el envío de correos de cuenta.</li>
       </ul>
       <p>No vendemos tus datos ni los cedemos a terceros con fines publicitarios.</p>
 

@@ -134,6 +134,28 @@ export async function passport(request: Request, env: V2Env, courierId: string):
     }
   }
 
+  // Opinión propia del visitante (una por usuario y mensajero): permite editarla.
+  let myReview: Record<string, unknown> | null = null;
+  if (viewerId && viewerId !== courierId) {
+    const own = await sdb
+      .prepare("SELECT * FROM reviews WHERE courier_id=? AND author_id=? AND status='published' ORDER BY created_at DESC LIMIT 1")
+      .bind(courierId, viewerId)
+      .first<Record<string, unknown>>();
+    if (own) {
+      myReview = toReviewDto(
+        {
+          id: own.id as string,
+          rating: own.rating as number,
+          comment: own.comment as string,
+          isVerified: own.is_verified as number,
+          response: (own.response as string | null) ?? null,
+          createdAt: own.created_at as number,
+        },
+        'Tú',
+      );
+    }
+  }
+
   const coverageIds = ((profile.coverage_csv as string) ?? '').split(',').filter(Boolean);
   const coverageNames: string[] = [];
   if (coverageIds.length > 0) {
@@ -177,6 +199,7 @@ export async function passport(request: Request, env: V2Env, courierId: string):
         authorNames.get(r.author_id as string) ?? 'Usuario MENRUT',
       ),
     ),
+    myReview,
     isDemo: row.is_demo === 1,
   };
 }
@@ -212,33 +235,67 @@ export async function submitReview(request: Request, env: V2Env, courierId: stri
     if (!verificationId) throw new HttpError(400, 'La entrega indicada no está verificada a tu nombre.');
   }
 
-  const id = newId();
-  const ratingSum = profile.rating_sum + rating;
-  const ratingCount = profile.rating_count + 1;
-  await sdb.batch([
-    sdb
-      .prepare(
-        `INSERT INTO reviews(id,verification_id,courier_id,author_id,rating,comment,is_verified,status,created_at)
-         VALUES(?,?,?,?,?,?,?,'published',?)`
-      )
-      .bind(id, verificationId, courierId, user.id, rating, comment, verificationId ? 1 : 0, nowMs()),
-    sdb
-      .prepare('UPDATE courier_profiles SET rating_sum=?, rating_count=?, version=version+1, updated_at=unixepoch() WHERE user_id=?')
-      .bind(ratingSum, ratingCount, courierId),
-    sdb
-      .prepare(
-        `INSERT OR IGNORE INTO shard_outbox(id,user_id,version)
-         SELECT 'profile:'||user_id||':'||version, user_id, version FROM courier_profiles WHERE user_id=?`
-      )
-      .bind(courierId),
-  ]);
+  const existing = await sdb
+    .prepare("SELECT id, rating, verification_id, is_verified FROM reviews WHERE courier_id=? AND author_id=? AND status='published' ORDER BY created_at DESC LIMIT 1")
+    .bind(courierId, user.id)
+    .first<{ id: string; rating: number; verification_id: string | null; is_verified: number }>();
+
+  let id: string;
+  let isVerified = verificationId ? 1 : 0;
+  let ratingSum: number;
+  let ratingCount: number;
+  let updated = false;
+  if (existing) {
+    // Editar: sustituye la valoración anterior (no suma otra). Conserva la verificación ya vinculada.
+    updated = true;
+    id = existing.id;
+    isVerified = existing.is_verified;
+    ratingSum = profile.rating_sum - existing.rating + rating;
+    ratingCount = profile.rating_count;
+    await sdb.batch([
+      sdb
+        .prepare('UPDATE reviews SET rating=?, comment=? WHERE id=?')
+        .bind(rating, comment, id),
+      sdb
+        .prepare('UPDATE courier_profiles SET rating_sum=?, version=version+1, updated_at=unixepoch() WHERE user_id=?')
+        .bind(ratingSum, courierId),
+      sdb
+        .prepare(
+          `INSERT OR IGNORE INTO shard_outbox(id,user_id,version)
+           SELECT 'profile:'||user_id||':'||version, user_id, version FROM courier_profiles WHERE user_id=?`
+        )
+        .bind(courierId),
+    ]);
+  } else {
+    id = newId();
+    ratingSum = profile.rating_sum + rating;
+    ratingCount = profile.rating_count + 1;
+    await sdb.batch([
+      sdb
+        .prepare(
+          `INSERT INTO reviews(id,verification_id,courier_id,author_id,rating,comment,is_verified,status,created_at)
+           VALUES(?,?,?,?,?,?,?,'published',?)`
+        )
+        .bind(id, verificationId, courierId, user.id, rating, comment, isVerified, nowMs()),
+      sdb
+        .prepare('UPDATE courier_profiles SET rating_sum=?, rating_count=?, version=version+1, updated_at=unixepoch() WHERE user_id=?')
+        .bind(ratingSum, ratingCount, courierId),
+      sdb
+        .prepare(
+          `INSERT OR IGNORE INTO shard_outbox(id,user_id,version)
+           SELECT 'profile:'||user_id||':'||version, user_id, version FROM courier_profiles WHERE user_id=?`
+        )
+        .bind(courierId),
+    ]);
+  }
   await syncProjection(env, courierId).catch(() => null);
 
   return {
     review: toReviewDto(
-      { id, rating, comment, isVerified: verificationId ? 1 : 0, response: null, createdAt: nowMs() },
+      { id, rating, comment, isVerified, response: null, createdAt: nowMs() },
       user.fullName,
     ),
+    updated,
     ratingAvg: ratingCount > 0 ? ratingSum / ratingCount : 0,
     ratingCount,
   };

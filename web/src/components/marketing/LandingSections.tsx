@@ -183,17 +183,17 @@ function Seguridad() {
             }
           />
           <Card
-            title="Opiniones y reportes"
-            body="Tras la entrega puedes opinar en 120 caracteres, una vez por mensajero. Si algo no es correcto, puedes reportarlo."
+            title="Valoración y comentario"
+            body="Valora de 1 a 5 estrellas y escribe un comentario de hasta 120 caracteres. Una opinión por mensajero: si cambias de opinión, la editas."
             visual={
               <div className="flex h-full flex-col justify-center gap-3 px-2" aria-hidden="true">
                 <div className="rounded-xl bg-white p-3 shadow-sm">
                   <span className="text-sm text-[#f5a524]">★★★★★</span>
                   <span className="mt-1 block"><Bar w="w-full" /></span>
                 </div>
-                <div className="ml-6 rounded-xl bg-white p-3 shadow-sm">
-                  <span className="text-sm text-[#f5a524]">★★★★☆</span>
-                  <span className="mt-1 block"><Bar w="w-3/4" /></span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-[#fff4e0] px-3 py-1 text-xs font-bold text-[#b76e00] ring-1 ring-[#f5a524]/40">Editar valoración</span>
+                  <span className="text-xs text-[#5a6f91]">120 caracteres</span>
                 </div>
               </div>
             }
