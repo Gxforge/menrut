@@ -89,6 +89,15 @@ echo "Chunks con /api/v2 inlineada:"
 echo "$CHUNKS"
 [ -n "$CHUNKS" ] || { echo "ERROR: la base /api/v2 no aparece en los chunks" >&2; exit 1; }
 
+# Supabase: sin estas variables la app no carga (/app/ y /admin). Falla el build si faltan.
+if ! grep -rq 'supabase\.co' "$OUT/_next/static/chunks/"; then
+  echo "ERROR: la URL de Supabase no aparece en el bundle. Revisa web/.env (NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY)." >&2
+  exit 1
+fi
+if grep -rq 'Supabase no configurado' "$OUT/_next/static/chunks/"; then
+  echo "AVISO: el bundle incluye el mensaje de configuración; verifica que la URL exista." >&2
+fi
+
 if grep -rq 'NEXT_PUBLIC_API_BASE' "$OUT"; then
   echo "ERROR: NEXT_PUBLIC_API_BASE sin inlinear en la salida" >&2
   exit 1
