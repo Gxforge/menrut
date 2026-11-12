@@ -3,16 +3,20 @@ import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
+// preload: false — la app se pinta en el cliente; el título (Manrope) aparece
+// después de hidratar y el navegador avisaba de precargas sin usar.
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {

@@ -21,6 +21,15 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
 - La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
 
+## Versión 2.0.4
+
+**Para todos**
+- Corregido el aviso de fuentes «precargadas sin usar» en el navegador: la app ya no precarga tipografías que no necesita al arrancar.
+- Corregido el enlace `/admin`, que no abría la aplicación (se redirigía a la portada).
+
+**Para los mensajeros**
+- Un cliente que intenta abrir funciones de mensajero recibe ahora «No tienes permisos» (antes veía un mensaje de perfil no creado).
+
 ## Versión 2.0.3
 
 **Para los mensajeros**

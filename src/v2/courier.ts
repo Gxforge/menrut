@@ -14,23 +14,37 @@ import {
   SERVICE_TYPES,
   type V2Env,
 } from './core';
-import { requireAuth } from './identity';
+import { loadAccount, requireAuth } from './identity';
 import { assignedShard, bumpProfileVersion, syncProjection } from './shard';
 import { toReviewDto, toWalletDto } from './dto';
 import { activeMembership, getWallet, ledgerTransactions } from './wallet';
 
 /** Perfil del mensajero en su shard; 409 claro si no existe. */
+/**
+ * Un usuario que NO es mensajero no tiene perfil de mensajero: debe recibir
+ * 403 (sin permisos), no 409 («cierra sesión y vuelve a entrar»). La
+ * comprobación de rol solo se hace en la rama de error para no añadir coste
+ * a las peticiones válidas.
+ */
+async function missingCourierProfile(env: V2Env, userId: string): Promise<never> {
+  const account = await loadAccount(env, userId);
+  if (account && account.role !== 'courier') {
+    throw new HttpError(403, 'No tienes permisos para realizar esta acción.');
+  }
+  throw new HttpError(409, 'Tu perfil de mensajero no está creado. Cierra sesión y vuelve a entrar.');
+}
+
 export async function requireCourierShard(
   env: V2Env,
   userId: string,
 ): Promise<{ db: D1Database; profile: Record<string, unknown> }> {
   const shard = await assignedShard(env, userId);
   if (!shard) {
-    throw new HttpError(409, 'Tu perfil de mensajero no está creado. Cierra sesión y vuelve a entrar.');
+    return missingCourierProfile(env, userId);
   }
   const profile = await shard.db.prepare('SELECT * FROM courier_profiles WHERE user_id=?').bind(userId).first();
   if (!profile) {
-    throw new HttpError(409, 'Tu perfil de mensajero no está creado. Cierra sesión y vuelve a entrar.');
+    return missingCourierProfile(env, userId);
   }
   return { db: shard.db, profile };
 }
