@@ -230,7 +230,8 @@ export function toWalletDto(
     planName: membership?.planName ?? null,
     planExpiresAt: membership ? iso(membership.expiresAtMs) : null,
     isPublic,
-    transactions,
+    // Contrato del frontend: createdAt es texto ISO (localeCompare en la pantalla de membresía).
+    transactions: transactions.map((t) => ({ ...t, createdAt: iso(t.createdAt) })),
   };
 }
 
