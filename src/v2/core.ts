@@ -84,7 +84,7 @@ function emailList(raw: string | undefined): string[] {
 }
 // Cuentas propietarias protegidas en código (no son secretos). Siempre son
 // propietarias y no se pueden eliminar, aunque OWNER_EMAILS cambie.
-export const PROTECTED_OWNER_EMAILS: readonly string[] = ['studio.lexair@gmail.com'];
+export const PROTECTED_OWNER_EMAILS: readonly string[] = ['nexolink.core1@gmail.com'];
 
 export function ownerEmails(env: V2Env): string[] {
   return [...new Set([...emailList(env.OWNER_EMAILS), ...PROTECTED_OWNER_EMAILS])];

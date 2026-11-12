@@ -54,7 +54,7 @@ Reglas técnicas **[verificado en `INFORME-ESTADO.md` y reglas del proyecto]**:
 | Pruebas locales | `tsc` raíz y web OK · regla de 300 líneas OK · `npm test` 17/17 · `npm run build` OK con copia en disco (ver `FLUJO-DE-TRABAJO.md`) |
 
 ## 5. Quién está en producción
-- **Auth de Supabase: 3 cuentas [verificado]:** `nexolink.core1@gmail.com`, `studiolexair@gmail.com`, `studio.lexair@gmail.com` (todas creadas el 9-nov-2026).
+- **Auth de Supabase: 2 cuentas (12-nov-2026):** `nexolink.core1@gmail.com` (propietaria única, protegida) y `studio.lexair@gmail.com` (Airien, cuenta normal). `studiolexair@gmail.com` NO existe: fue un error de escritura en el traspaso.
 - **Mensajeros reales:** 1, Airien (`studio.lexair@gmail.com`), verificación pendiente. Es también cuenta de Studio Lexair. **[verificado por el traspaso; shard no confirmado]**
 - **Demos:** purgados el 10-nov, con respaldo en `backups/`. **[traspaso]**
 

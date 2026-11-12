@@ -19,4 +19,10 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 
 **Para la administración**
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
-- La cuenta propietaria nueva (studio.lexair@gmail.com) está protegida.
+- La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
+
+## Versión 2.0.1 (12-nov-2026)
+
+**Para la administración**
+- Ajuste de cuentas: la única cuenta propietaria y de administración es nexolink.core1@gmail.com.
+  Está protegida: no se puede eliminar ni perder su rol.
