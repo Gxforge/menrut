@@ -9,7 +9,7 @@
 import { asString, checkRate, HttpError, requireExactRole, type V2Env } from './core';
 import { requireAuth } from './identity';
 import { requireCourierShard } from './courier';
-import { syncProjection } from './shard';
+import { assignedShard, bumpProfileVersion, syncProjection } from './shard';
 import { creditGrant } from './wallet';
 
 export const LAUNCH_DISCOUNT_PERCENT = 20;
@@ -116,6 +116,18 @@ export async function setBaseMunicipality(
     )
     .bind(user.id, provinceId, municipalityId, Date.now())
     .run();
+
+  // El directorio público se alimenta del perfil del shard. Sin esta escritura,
+  // un mensajero de zona queda con municipio nulo y no aparece en «De mi zona» ni en cercanos.
+  const shard = await assignedShard(env, user.id);
+  if (shard) {
+    await shard.db
+      .prepare('UPDATE courier_profiles SET province_id=?, municipality_id=? WHERE user_id=?')
+      .bind(provinceId, municipalityId, user.id)
+      .run();
+    await bumpProfileVersion(env, user.id);
+    await syncProjection(env, user.id).catch(() => null);
+  }
   return { ok: true, municipalityId };
 }
 

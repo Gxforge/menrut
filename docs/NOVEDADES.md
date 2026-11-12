@@ -27,6 +27,9 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Al haber una versión nueva aparece un **cartel centrado** «Actualizando MENRUT» (antes era una franja arriba).
 - El cartel **aparece una sola vez** por versión. Si la actualización no es obligatoria, puedes pulsar «Más tarde».
 
+**Para los mensajeros**
+- Corregido: al indicar tu municipio base, tu perfil ahora aparece en **«De mi zona»** y en **«Mensajeros cercanos»** (antes quedaba sin municipio en el directorio público).
+
 ## Versión 2.0.4
 
 **Para todos**
