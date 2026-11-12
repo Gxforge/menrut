@@ -1,6 +1,6 @@
 // MENRUT — ReputationScreen · Detalle de una opinión (sheet inferior).
 // Incluye la RESPUESTA del mensajero: primera respuesta o edición de la
-// existente (máx. 600 caracteres; notifica al cliente solo la primera vez).
+// existente (máx. 120 caracteres; notifica al cliente solo la primera vez).
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -67,7 +67,7 @@ export function ReviewDetailSheet({ abierta, onClose, onReport, onRespond, respo
                   aria-label="Tu respuesta pública"
                   placeholder="Responde con respeto: tu respuesta es pública."
                   className="rounded-xl"
-                  maxLength={600}
+                  maxLength={120}
                 />
                 <div className="flex gap-2">
                   <Button
@@ -90,7 +90,7 @@ export function ReviewDetailSheet({ abierta, onClose, onReport, onRespond, respo
                   </Button>
                 </div>
                 <p className="text-center text-[10.5px] text-muted-foreground">
-                  {texto.length}/600 · el cliente recibe una notificación la primera vez.
+                  {texto.length}/120 · el cliente recibe una notificación la primera vez.
                 </p>
               </div>
             ) : (

@@ -75,7 +75,7 @@ export function ReviewDialog({
           onChange={(e) => onCommentChange(e.target.value)}
           aria-label="Comentario sobre el mensajero"
           className="rounded-xl"
-          maxLength={600}
+          maxLength={120}
         />
         {canLinkDelivery && (
           <button

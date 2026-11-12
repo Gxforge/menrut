@@ -1,7 +1,7 @@
 // POST /api/couriers/[id]/reviews — Valorar y comentar a un mensajero (auth).
 // Reglas: requiere sesión (cualquier rol salvo el propio mensajero), una sola
 // reseña por autor y mensajero (se actualiza si ya existía), rating 1-5 y
-// comentario opcional (≤ 600 caracteres). Recalcula ratingAvg/ratingCount.
+// comentario opcional (≤ 120 caracteres). Recalcula ratingAvg/ratingCount.
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { apiError, asInt, asString, checkRate, HttpError, requireAuth } from '@/lib/auth-server'
@@ -9,7 +9,7 @@ import { toReviewDto } from '@/lib/dto'
 
 export const dynamic = 'force-dynamic'
 
-const MAX_COMMENT = 600
+const MAX_COMMENT = 120
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {

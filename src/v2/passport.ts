@@ -191,7 +191,7 @@ export async function submitReview(request: Request, env: V2Env, courierId: stri
 
   const rating = asInt(body.rating);
   if (rating === null || rating < 1 || rating > 5) throw new HttpError(400, 'La puntuación debe estar entre 1 y 5.');
-  const comment = (asString(body.comment) ?? '').trim().slice(0, 600);
+  const comment = (asString(body.comment) ?? '').trim().slice(0, 120);
 
   const shard = await assignedShard(env, courierId);
   if (!shard) throw new HttpError(404, 'Mensajero no encontrado.');
