@@ -21,6 +21,12 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
 - La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
 
+## Versión 2.0.5
+
+**Para todos**
+- Al haber una versión nueva aparece un **cartel centrado** «Actualizando MENRUT» (antes era una franja arriba).
+- El cartel **aparece una sola vez** por versión. Si la actualización no es obligatoria, puedes pulsar «Más tarde».
+
 ## Versión 2.0.4
 
 **Para todos**

@@ -1,7 +1,9 @@
 // MENRUT — Aviso de actualización.
 // Compara la compilación cargada con /version.json (sin caché). Si hay una nueva:
-//  · muestra «Actualización en proceso» (se puede cerrar, pero la app se recargará);
-//  · si la actualización es obligatoria, recarga sola; si no, ofrece «Actualizar ahora».
+//  · muestra un cartel centrado «Actualizando MENRUT» UNA sola vez por versión
+//    (las comprobaciones periódicas no lo vuelven a mostrar);
+//  · si la actualización es obligatoria, recarga sola; si no, ofrece
+//    «Actualizar ahora» o «Más tarde» (recordado durante la sesión).
 // Tras recargar muestra una pantalla de verificación (versión y estado de la API)
 // y solo entonces la oculta. No borra la caché del navegador.
 'use client'
@@ -11,11 +13,29 @@ import { Loader2 } from 'lucide-react'
 import { APP_BUILD } from '@/lib/app-version'
 
 const POST_UPDATE_KEY = 'menrut:post-update'
+const DISMISSED_KEY = 'menrut:update-dismissed'
 const CHECK_EVERY_MS = 60_000
 const RELOAD_AFTER_MS = 8_000
 
-type Remote = { build: string; mandatory?: boolean }
+type Remote = { build: string; version?: string; mandatory?: boolean }
 type Phase = 'idle' | 'updating' | 'verifying' | 'failed'
+
+function readSession(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeSession(key: string, value: string | null): void {
+  try {
+    if (value === null) sessionStorage.removeItem(key)
+    else sessionStorage.setItem(key, value)
+  } catch {
+    /* sin sessionStorage no se puede recordar; no es grave */
+  }
+}
 
 async function fetchRemote(): Promise<Remote | null> {
   try {
@@ -39,29 +59,20 @@ async function apiHealthy(): Promise<boolean> {
 
 export function UpdateGate() {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [hidden, setHidden] = useState(false)
   const [target, setTarget] = useState<Remote | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const shownBuild = useRef<string | null>(null)
 
   // 1) Tras una recarga por actualización: verificar antes de ocultar la pantalla.
   useEffect(() => {
-    let expected: string | null = null
-    try {
-      expected = sessionStorage.getItem(POST_UPDATE_KEY)
-    } catch {
-      expected = null
-    }
+    const expected = readSession(POST_UPDATE_KEY)
     if (!expected) return
     setPhase('verifying')
     ;(async () => {
       const [remote, api] = await Promise.all([fetchRemote(), apiHealthy()])
       const ok = !!remote && remote.build === APP_BUILD && api
       if (ok) {
-        try {
-          sessionStorage.removeItem(POST_UPDATE_KEY)
-        } catch {
-          /* sin sessionStorage no hay nada que limpiar */
-        }
+        writeSession(POST_UPDATE_KEY, null)
         setPhase('idle')
       } else {
         setPhase('failed')
@@ -77,17 +88,16 @@ export function UpdateGate() {
     async function check() {
       const remote = await fetchRemote()
       if (cancelled || !remote || remote.build === APP_BUILD) return
+      // Ya mostrado o descartado para esta versión: no volver a mostrarlo.
+      if (shownBuild.current === remote.build) return
+      if (readSession(DISMISSED_KEY) === remote.build && !remote.mandatory) return
+      shownBuild.current = remote.build
       setTarget(remote)
       setPhase((p) => (p === 'verifying' ? p : 'updating'))
-      setHidden(false)
       if (remote.mandatory) {
         if (timer.current) return
         timer.current = setTimeout(() => {
-          try {
-            sessionStorage.setItem(POST_UPDATE_KEY, remote.build)
-          } catch {
-            /* sin sessionStorage la recarga sigue, sin verificación posterior */
-          }
+          writeSession(POST_UPDATE_KEY, remote.build)
           window.location.reload()
         }, RELOAD_AFTER_MS)
       }
@@ -106,6 +116,11 @@ export function UpdateGate() {
       if (timer.current) clearTimeout(timer.current)
     }
   }, [])
+
+  function postpone() {
+    if (target) writeSession(DISMISSED_KEY, target.build)
+    setPhase('idle')
+  }
 
   if (phase === 'verifying') {
     return (
@@ -133,37 +148,52 @@ export function UpdateGate() {
     )
   }
 
-  if (phase !== 'updating' || hidden) return null
+  if (phase !== 'updating' || !target) return null
+
+  const mandatory = !!target.mandatory
 
   return (
-    <div
-      role="status"
-      className="fixed inset-x-0 top-0 z-[90] flex items-center gap-3 bg-navy px-4 py-3 text-[13px] text-white shadow-lg"
-    >
-      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-      <p className="flex-1 leading-snug">
-        <strong>Actualización en proceso.</strong>{' '}
-        {target?.mandatory
-          ? 'La app se recargará al terminar.'
-          : 'Hay una versión nueva. Pulsa «Actualizar» cuando quieras.'}
-      </p>
-      {target?.mandatory ? null : (
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-navy"
-        >
-          Actualizar
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={() => setHidden(true)}
-        aria-label="Cerrar aviso"
-        className="px-1 text-[18px] leading-none opacity-80"
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-navy/60 px-5 backdrop-blur-[2px]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="update-title"
+        aria-describedby="update-text"
+        className="w-full max-w-[340px] rounded-3xl bg-white px-6 py-7 text-center shadow-2xl"
       >
-        ×
-      </button>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue/10">
+          <Loader2 className="h-7 w-7 animate-spin text-blue" aria-hidden />
+        </div>
+        <h2 id="update-title" className="text-[18px] font-extrabold text-navy">
+          Actualizando MENRUT
+        </h2>
+        <p id="update-text" className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
+          {mandatory
+            ? 'Estamos instalando la versión nueva. La app se recargará sola en unos segundos. No cierres la aplicación.'
+            : 'Hay una versión nueva disponible. Puedes actualizar ahora o más tarde.'}
+        </p>
+        {target.version ? (
+          <p className="mt-3 text-[12px] text-muted-foreground">Versión {target.version}</p>
+        ) : null}
+        {mandatory ? null : (
+          <div className="mt-5 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="h-11 rounded-full bg-blue px-6 text-[14px] font-bold text-white"
+            >
+              Actualizar ahora
+            </button>
+            <button
+              type="button"
+              onClick={postpone}
+              className="h-10 rounded-full px-6 text-[13px] font-semibold text-navy"
+            >
+              Más tarde
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
