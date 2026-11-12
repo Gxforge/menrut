@@ -28,6 +28,7 @@ import { DurationSelector } from './PlanOptionsScreenPieces/DurationSelector'
 import { PlanSummaryCard } from './PlanOptionsScreenPieces/PlanSummaryCard'
 import { monthsOf, type TierId } from './PlanOptionsScreenPieces/helpers'
 import type { PaymentProofDto, PlanDto } from '@/lib/types'
+import { LaunchPromoCard } from './PlanOptionsScreenPieces/LaunchPromoCard'
 
 export default function PlanOptionsScreen() {
   const session = useAppStore((s) => s.session)
@@ -178,6 +179,9 @@ export default function PlanOptionsScreen() {
       <div className="px-4 pt-4 pb-8">
         {/* Aviso: ya hay una solicitud pendiente en revisión */}
         {pendingPayment ? <PendingNotice pendingPayment={pendingPayment} onOpen={abrirPendiente} /> : null}
+
+        {/* Promoción de lanzamiento: descuento temporal y cupo gratuito por municipio */}
+        <LaunchPromoCard />
 
         {/* Prueba gratuita (una sola vez por cuenta; fuera de la matriz de compra) */}
         {trial && !hasUsedTrial ? (

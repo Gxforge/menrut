@@ -14,7 +14,7 @@ Reglas de negocio del propietario (según `PROMPT-AGENTE-MENRUT.txt` y la docume
 - Todo en español. Diseño móvil primero.
 
 ## 2. Accesos y propiedad
-- **Propietario:** `nexolink.core1@gmail.com` **[verificado: es el único correo de `OWNER_EMAILS`, `ADMIN_EMAILS` y `MODERATOR_EMAILS` en la documentación; y existe en Auth]**.
+- **Propietario:** `nexolink.core1@gmail.com` (cuenta de Auth recreada el 11-nov-2026). **[supuesto: que esté en `OWNER_EMAILS` no se pudo verificar, porque es un secreto de Cloudflare Pages. Confirmar antes de usar el panel.]**
 - **Repositorio:** `Gxforge/menrut`, privado, rama `main`. Último commit en GitHub: `92dbe40` («Lanzamiento»).
 - **Cloudflare:** proyecto Pages `menrut`, cuenta `665fb2e4…`. Es una cuenta distinta de la de Studio Lexair.
 - **Supabase:** organización «NexoLink Core». Proyectos `menrut-principal` (producción, ref `orqskfecwtroppqimhnj`) y `menrut-secundario` (pruebas).

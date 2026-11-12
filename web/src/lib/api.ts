@@ -44,6 +44,13 @@ export async function req<T>(path: string, init?: RequestInit & { auth?: boolean
 
 // ─── Público ────────────────────────────────────────────────────────────────
 
+export interface LaunchPromoDto {
+  discount: { percent: number; active: boolean; endsAt: string }
+  municipality: { id: string; name: string } | null
+  cupos: { total: number; remaining: number } | null
+  claim: { municipalityId: string; months: number; granted: boolean; claimedAt: number } | null
+}
+
 export const api = {
   // Territorios (caché local de 24h; catálogo estable)
   territories: () =>
@@ -64,6 +71,12 @@ export const api = {
   // Rutas populares (activas, sin sesión)
   popularRoutes: () =>
     req<{ routes: RouteDto[]; couriers: Record<string, string> }>('/routes/popular', { auth: false }),
+
+  // ─── Promoción de lanzamiento (cupos por municipio + 20 % temporal) ───
+  launchPromo: () => req<LaunchPromoDto>('/courier/me/launch-promo'),
+  claimLaunchPromo: () => req<{ ok: true; months: number; seq?: number; expiresAt: number | null }>('/courier/me/launch-promo/claim', { method: 'POST', body: '{}' }),
+  setBaseMunicipality: (data: { provinceId: string; municipalityId: string }) =>
+    req<{ ok: true; municipalityId: string }>('/courier/me/base-municipality', { method: 'PUT', body: JSON.stringify(data) }),
 
   // ─── Perfil propio ────────────────────────────────────────────────────────
   updateProfile: (data: { fullName?: string; phone?: string; avatarUrl?: string }) =>

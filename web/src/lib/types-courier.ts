@@ -15,6 +15,9 @@ export interface PlanDto {
   tier: PlanTier // calculado del código: basic-* | pro-* | featured-* | prueba
   durationDays: number
   priceCup: number
+  /** Presente solo mientras dura la promo de lanzamiento (20 %). */
+  discountPercent?: number
+  discountedPriceCup?: number
   permanenceCredits: number
   toolCredits: number
   isTrial: boolean

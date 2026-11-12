@@ -44,7 +44,7 @@ export function TierSelector({ tier, byTier, onSelect }: TierSelectorProps) {
               {label}
             </p>
             <p className="mt-1 text-[11px] font-semibold leading-tight text-foreground/80">
-              {mes ? `${formatCup(mes.priceCup)}/mes` : '—'}
+              {mes ? `${formatCup(mes.discountedPriceCup ?? mes.priceCup)}/mes` : '—'}
             </p>
             <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
               {mes ? `${mes.toolCredits} cr. de herramientas` : ''}

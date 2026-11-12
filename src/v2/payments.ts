@@ -1,3 +1,4 @@
+import { discountedPriceCup } from './launch-promo';
 // MENRUT v2 — Pagos manuales por Transfermóvil: el mensajero elige plan,
 // recibe instrucciones (PlatformConfig), paga y sube la captura al bucket
 // PRIVADO con service_role (nunca desde el navegador); el propietario decide y
@@ -69,6 +70,7 @@ export async function requestPlan(request: Request, env: V2Env, body: Record<str
     .bind(planId)
     .first<{ id: string; code: string; name: string; priceCup: number; isActive: number; isTrial: number }>();
   if (!plan || !plan.isActive) throw new HttpError(400, 'El plan seleccionado no está disponible.');
+  const amountCup = discountedPriceCup(plan.priceCup, plan.isTrial === 1);
   if (plan.isTrial) {
     throw new HttpError(400, 'La prueba gratuita no requiere pago: actívala desde tus membresías.');
   }
@@ -85,14 +87,14 @@ export async function requestPlan(request: Request, env: V2Env, body: Record<str
     .prepare(
       "INSERT INTO payment_proofs(id,courier_id,submitted_by,plan_id,amount_cup,method,reference,proof_url,status,created_at) VALUES(?,?,?,?,?,'transfermovil','','','pending',?)"
     )
-    .bind(proofId, user.id, user.id, plan.id, plan.priceCup, Math.floor(nowMs() / 1000))
+    .bind(proofId, user.id, user.id, plan.id, amountCup, Math.floor(nowMs() / 1000))
     .run();
 
   const proof = (await db
     .prepare(`${PAYMENT_PROOF_SELECT} WHERE pp.id=? LIMIT 1`)
     .bind(proofId)
     .first()) as unknown as PaymentProofRow;
-  const instructions = await readPaymentInstructions(env, plan.priceCup, plan.name);
+  const instructions = await readPaymentInstructions(env, amountCup, plan.name);
 
   await audit(
     env,
@@ -100,7 +102,7 @@ export async function requestPlan(request: Request, env: V2Env, body: Record<str
     'payment.requested',
     'payment_proofs',
     proofId,
-    `Mensajero: ${user.fullName}. Plan: ${plan.name} (${plan.code}). Importe: ${plan.priceCup} CUP.`,
+    `Mensajero: ${user.fullName}. Plan: ${plan.name} (${plan.code}). Importe: ${amountCup} CUP.`,
   );
 
   return { proof: toPaymentProofDto(proof), instructions };

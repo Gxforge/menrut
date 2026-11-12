@@ -55,7 +55,7 @@ export function PlanSummaryCard({
 
       <div className="mt-3.5 flex items-baseline gap-2">
         <p className="font-display text-[26px] font-bold leading-none">
-          {formatCup(selectedPlan.priceCup)}
+          {formatCup(selectedPlan.discountedPriceCup ?? selectedPlan.priceCup)}
         </p>
         <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-semibold text-navy">
           {monthsSel} {monthsSel === 1 ? 'mes' : 'meses'}

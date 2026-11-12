@@ -1,3 +1,4 @@
+import { discountedPriceCup, launchDiscountActive, LAUNCH_DISCOUNT_ENDS_AT, LAUNCH_DISCOUNT_PERCENT } from './launch-promo';
 // MENRUT v2 — Catálogos públicos: planes (precios aprobados), herramientas y
 // rutas populares (derivadas de la proyección, sin fanout a shards).
 import type { V2Env } from './core';
@@ -18,7 +19,19 @@ export async function plans(env: V2Env): Promise<Record<string, unknown>> {
   const sorted = [...list].sort(
     (a, b) => tierOrder(a.code, a.isTrial) - tierOrder(b.code, b.isTrial) || a.durationDays - b.durationDays || a.priceCup - b.priceCup,
   );
-  return { plans: sorted.map(toPlanDto) };
+  const promo = launchDiscountActive();
+  return {
+    plans: sorted.map((p) => {
+      const dto = toPlanDto(p);
+      if (!promo || p.isTrial) return dto;
+      return {
+        ...dto,
+        discountPercent: LAUNCH_DISCOUNT_PERCENT,
+        discountedPriceCup: discountedPriceCup(p.priceCup, false),
+      };
+    }),
+    discount: { percent: LAUNCH_DISCOUNT_PERCENT, active: promo, endsAt: LAUNCH_DISCOUNT_ENDS_AT },
+  };
 }
 
 export async function tools(env: V2Env): Promise<Record<string, unknown>> {

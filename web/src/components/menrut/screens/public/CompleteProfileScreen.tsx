@@ -20,6 +20,7 @@ import { api } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
 import type { PassportDto } from '@/lib/types'
 import { FichaForm } from './CompleteProfileScreenPieces/FichaForm'
+import { BaseMunicipalityCard } from './CompleteProfileScreenPieces/BaseMunicipalityCard'
 
 export default function CompleteProfileScreen() {
   const session = useAppStore((s) => s.session)
@@ -102,11 +103,14 @@ export default function CompleteProfileScreen() {
   const initial: PassportDto | null = passportQ.data ?? null
 
   return (
-    <FichaForm
-      key={courierId ?? 'nueva'}
-      courierId={courierId}
-      currentType={dashQ.data.coverageType}
-      initial={initial}
-    />
+    <>
+      <BaseMunicipalityCard />
+      <FichaForm
+        key={courierId ?? 'nueva'}
+        courierId={courierId}
+        currentType={dashQ.data.coverageType}
+        initial={initial}
+      />
+    </>
   )
 }

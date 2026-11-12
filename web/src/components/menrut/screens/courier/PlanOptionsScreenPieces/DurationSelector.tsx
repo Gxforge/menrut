@@ -47,7 +47,7 @@ export function DurationSelector({ tierPlans, monthsSel, monthly, onSelect }: Du
                 activo ? 'text-white' : 'text-foreground',
               )}
             >
-              {formatCup(p.priceCup)}
+              {formatCup(p.discountedPriceCup ?? p.priceCup)}
             </p>
             {ahorroDur > 0 ? (
               <p

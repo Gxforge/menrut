@@ -28,6 +28,7 @@ import {
   startConversation,
 } from './social';
 import { courierDashboard, courierReviews, courierWallet, updateCourierProfile } from './courier';
+import { claimLaunchPromo, launchPromoStatus, setBaseMunicipality } from './launch-promo';
 import { requestMembership, submitVerification } from './courier-plan';
 import {
   createCourierRoute,
@@ -197,6 +198,15 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
     }
     if (method === 'POST' && path[2] === 'reviews' && path.length === 5 && path[4] === 'respond') {
       return { json: await respondReview(request, env, path[3], body) };
+    }
+    if (method === 'GET' && path[2] === 'launch-promo' && path.length === 3) {
+      return { json: await launchPromoStatus(request, env) };
+    }
+    if (method === 'POST' && path[2] === 'launch-promo' && path[3] === 'claim' && path.length === 4) {
+      return { json: await claimLaunchPromo(request, env) };
+    }
+    if (method === 'PUT' && path[2] === 'base-municipality' && path.length === 3) {
+      return { json: await setBaseMunicipality(request, env, body) };
     }
     if (method === 'POST' && path[2] === 'membership' && path.length === 3) {
       return { json: await requestMembership(request, env, body) };
