@@ -9,6 +9,7 @@
 import { useEffect } from 'react'
 import { MenrutMark } from '@/components/menrut/core/Brand'
 import { useAppStore } from '@/lib/store'
+import { isAdminEntry } from '@/lib/admin-entry'
 
 export default function SplashScreen() {
   const session = useAppStore((s) => s.session)
@@ -17,7 +18,7 @@ export default function SplashScreen() {
   useEffect(() => {
     // Enlace directo del staff: /?admin. Sin sesión, pasa por el inicio de sesión.
     // El permiso real lo comprueba el backend; esto solo decide a qué pantalla se entra.
-    const wantsAdmin = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('admin')
+    const wantsAdmin = isAdminEntry()
     const target = session
       ? session.role === 'courier'
         ? 'courier-home'

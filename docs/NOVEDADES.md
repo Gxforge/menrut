@@ -21,6 +21,16 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
 - La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
 
+## Versión 2.0.3
+
+**Para los mensajeros**
+- Puedes **cancelar una solicitud de plan** que todavía no pagaste (por ejemplo, si elegiste otro plan). No se cobra ni se acredita nada.
+- La **tarjeta de cobro** muestra solo los últimos 4 números (xxxx xxxx xxxx 1234). Al pulsar «Copiar» se copia el número completo.
+- Si tu **plan de lanzamiento** quedó reservado sin activarse, ahora aparece el botón **«Activar plan»**. Al activarse verás una caja de regalo que se abre con confeti. Solo se activa una vez.
+
+**Para la administración**
+- El acceso de staff está en **menrut.ddns.net/admin**: pantalla de inicio de sesión, sin registro.
+
 ## Versión 2.0.2
 
 **Para los mensajeros**

@@ -66,7 +66,7 @@ export function PaymentSteps({
             Abre {method} y transfiere exactamente{' '}
             <strong className="font-semibold">{formatCup(amount)}</strong>
             {card ? (
-              <> a la tarjeta <strong className="font-semibold">{card}</strong>.</>
+              <> a la tarjeta <strong className="font-semibold">{maskCard(card)}</strong>.</>
             ) : (
               <> a la tarjeta de cobro de MENRUT.</>
             )}
@@ -100,7 +100,7 @@ export function PaymentSteps({
           </p>
           <div className="mt-2 flex items-center gap-3">
             <p className="min-w-0 flex-1 font-display text-[19px] font-bold leading-tight tracking-[0.06em] break-all">
-              {card}
+              {maskCard(card)}
             </p>
             <Button
               size="sm"
@@ -132,4 +132,11 @@ export function PaymentSteps({
       )}
     </>
   )
+}
+
+/** Muestra solo los últimos 4 dígitos (privacidad en lugares públicos). «Copiar» copia el número completo. */
+function maskCard(card: string): string {
+  const digits = card.replace(/\D/g, '')
+  const last4 = digits.length >= 4 ? digits.slice(-4) : card.slice(-4)
+  return `xxxx xxxx xxxx ${last4}`
 }

@@ -174,3 +174,32 @@ export async function myPayments(request: Request, env: V2Env): Promise<Record<s
     .all();
   return { payments: ((rows.results ?? []) as unknown as PaymentProofRow[]).map(toPaymentProofDto) };
 }
+
+/**
+ * Cancela una solicitud de pago que sigue pendiente y SIN captura (el usuario se
+ * equivocó de plan). No acredita nada: la solicitud se elimina. Si ya hay captura,
+ * el dinero puede haberse enviado y la decisión la toma el propietario.
+ */
+export async function cancelPaymentRequest(request: Request, env: V2Env, proofId: string): Promise<Record<string, unknown>> {
+  const { user } = await requireAuth(request, env);
+  requireExactRole(user.role, 'courier');
+  await checkRate(env, `payment-cancel:${user.id}`, 10, 60_000);
+  const db = env.D1_CORE;
+
+  const proof = await db
+    .prepare('SELECT id, courier_id, status, proof_url FROM payment_proofs WHERE id=? LIMIT 1')
+    .bind(proofId)
+    .first<{ id: string; courier_id: string; status: string; proof_url: string }>();
+  if (!proof || proof.courier_id !== user.id) throw new HttpError(404, 'Solicitud de pago no encontrada.');
+  if (proof.status !== 'pending') {
+    throw new HttpError(409, 'Solo puedes cancelar una solicitud que todavía está pendiente.');
+  }
+  if (proof.proof_url) {
+    throw new HttpError(409, 'Ya subiste la captura de la transferencia. El propietario la revisará.');
+  }
+  await db
+    .prepare("DELETE FROM payment_proofs WHERE id=? AND courier_id=? AND status='pending' AND proof_url=''")
+    .bind(proofId, user.id)
+    .run();
+  return { ok: true };
+}

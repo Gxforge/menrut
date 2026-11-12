@@ -36,7 +36,7 @@ import {
   listCourierRoutes,
   updateCourierRoute,
 } from './courier-routes';
-import { myPayments, requestPlan, uploadProof } from './payments';
+import { cancelPaymentRequest, myPayments, requestPlan, uploadProof } from './payments';
 import {
   adminAccounts,
   adminCouriers,
@@ -223,6 +223,9 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
     }
     if (method === 'POST' && path.length === 3 && path[2] === 'proof') {
       return { json: await uploadProof(request, env, path[1]) };
+    }
+    if (method === 'POST' && path.length === 3 && path[2] === 'cancel') {
+      return { json: await cancelPaymentRequest(request, env, path[1]) };
     }
     if (method === 'GET' && path[1] === 'mine' && path.length === 2) {
       return { json: await myPayments(request, env) };

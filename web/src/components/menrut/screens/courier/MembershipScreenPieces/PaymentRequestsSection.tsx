@@ -2,7 +2,7 @@
 // Transfermóvil con estado y subida de captura si falta.
 'use client'
 
-import { Coins, ImageUp, Receipt } from 'lucide-react'
+import { Coins, ImageUp, Receipt, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,8 @@ interface PaymentRequestsSectionProps {
   pagos: PaymentProofDto[]
   onRetry: () => void
   onUpload: (p: PaymentProofDto) => void
+  onCancel: (p: PaymentProofDto) => void
+  cancelling?: boolean
 }
 
 export function PaymentRequestsSection({
@@ -24,6 +26,8 @@ export function PaymentRequestsSection({
   pagos,
   onRetry,
   onUpload,
+  onCancel,
+  cancelling = false,
 }: PaymentRequestsSectionProps) {
   return (
     <section className="mt-4" aria-label="Mis solicitudes de pago">
@@ -106,6 +110,19 @@ export function PaymentRequestsSection({
                 >
                   <ImageUp className="h-4 w-4" aria-hidden />
                   Subir captura
+                </Button>
+              ) : null}
+
+              {p.status === 'pending' && !p.hasProof ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2 ml-2 h-9 rounded-full px-4 text-danger"
+                  disabled={cancelling}
+                  onClick={() => onCancel(p)}
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                  Cancelar solicitud
                 </Button>
               ) : null}
             </div>

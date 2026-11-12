@@ -14,6 +14,7 @@ import { signInWithEmail, signOutSupabase, readPendingRole } from '@/lib/auth'
 import { completeLogin } from '@/components/menrut/hooks'
 import { useAppStore } from '@/lib/store'
 import type { SessionUser } from '@/lib/types'
+import { isAdminEntry } from '@/lib/admin-entry'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -173,6 +174,7 @@ export default function LoginScreen() {
             </Button>
           </form>
 
+          {!isAdminEntry() ? (
           <p className="mt-5 text-center text-[13px] text-muted-foreground">
             ¿No tienes cuenta?{' '}
             <button
@@ -183,6 +185,7 @@ export default function LoginScreen() {
               Regístrate
             </button>
           </p>
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,9 +1,11 @@
 // Promoción de lanzamiento: descuento del 20 % (temporal) y cupo gratuito de tu municipio.
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Gift, Percent } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { LaunchGiftCelebration } from './LaunchGiftCelebration'
 
 function fechaLarga(iso: string): string {
   // El fin es exclusivo (1 de noviembre 00:00 hora de Cuba): se muestra el último día válido.
@@ -13,15 +15,16 @@ function fechaLarga(iso: string): string {
 
 export function LaunchPromoCard() {
   const qc = useQueryClient()
+  const [celebracion, setCelebracion] = useState<{ months: number } | null>(null)
   const q = useQuery({ queryKey: ['launch-promo'], queryFn: () => api.launchPromo() })
   const reclamar = useMutation({
     mutationFn: () => api.claimLaunchPromo(),
     onSuccess: (r) => {
-      toast.success(
-        `Plan gratis activado por ${r.months === 2 ? '2 meses' : '1 mes'}.${r.seq ? ` Cupo ${r.seq} de 10.` : ''}`,
-      )
+      // Caja de regalo + confeti (una vez). Reintentos del mismo cupo muestran lo mismo.
+      setCelebracion({ months: r.months })
       void qc.invalidateQueries({ queryKey: ['launch-promo'] })
       void qc.invalidateQueries({ queryKey: ['courier-dashboard'] })
+      void qc.invalidateQueries({ queryKey: ['courier-wallet'] })
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : 'No se pudo reclamar el plan. Inténtalo de nuevo.')
@@ -63,8 +66,10 @@ export function LaunchPromoCard() {
             <p className="font-display text-sm font-semibold text-foreground">Plan de lanzamiento gratis</p>
             {yaReclamado ? (
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Ya tienes tu plan de lanzamiento de {d.claim!.months === 2 ? '2 meses' : '1 mes'}
-                {d.claim!.granted ? ' activo.' : ' pendiente de activar. Vuelve a intentarlo.'}
+                Tu plan de lanzamiento de {d.claim!.months === 2 ? '2 meses' : '1 mes'}
+                {d.claim!.granted
+                  ? ' ya está activo.'
+                  : ' está reservado y falta activarlo. Pulsa «Activar plan» para completarlo.'}
               </p>
             ) : sinMunicipio ? (
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -92,7 +97,21 @@ export function LaunchPromoCard() {
             {reclamar.isPending ? 'Reclamando…' : 'Reclamar plan gratis'}
           </Button>
         ) : null}
+        {yaReclamado && !d.claim!.granted ? (
+          <Button
+            className="mt-3 h-11 w-full rounded-xl"
+            onClick={() => reclamar.mutate()}
+            disabled={reclamar.isPending || q.isFetching}
+          >
+            {reclamar.isPending ? 'Activando…' : 'Activar plan'}
+          </Button>
+        ) : null}
       </div>
+      <LaunchGiftCelebration
+        open={celebracion !== null}
+        months={celebracion?.months ?? 1}
+        onClose={() => setCelebracion(null)}
+      />
     </section>
   )
 }

@@ -190,6 +190,9 @@ export const api = {
     }),
 
   // Subida de la captura (multipart/form-data; el JWT va en el header).
+  cancelPaymentRequest: (proofId: string) =>
+    req<{ ok: true }>(`/payments/${proofId}/cancel`, { method: 'POST' }),
+
   uploadPaymentProof: async (proofId: string, file: File): Promise<{ proof: PaymentProofDto }> => {
     const token = await getAccessToken()
     const form = new FormData()

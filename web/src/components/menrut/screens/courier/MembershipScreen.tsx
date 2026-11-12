@@ -5,7 +5,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Crown } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
@@ -46,6 +47,20 @@ export default function MembershipScreen() {
   })
 
   const [dialog, setDialog] = useState<PaymentDialogState | null>(null)
+  const qc = useQueryClient()
+  const cancelarSolicitud = useMutation({
+    mutationFn: (p: PaymentProofDto) => api.cancelPaymentRequest(p.id),
+    onSuccess: () => {
+      toast.success('Solicitud cancelada. No se acreditó nada.')
+      void qc.invalidateQueries({ queryKey: ['courier-payments'] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'No se pudo cancelar la solicitud.'),
+  })
+  function confirmarCancelacion(p: PaymentProofDto) {
+    if (window.confirm('¿Cancelar esta solicitud? Todavía no has enviado captura, así que no se acredita nada.')) {
+      cancelarSolicitud.mutate(p)
+    }
+  }
 
   const wallet = walletQ.data
   const planes = plansQ.data?.plans ?? []
@@ -109,6 +124,8 @@ export default function MembershipScreen() {
           pagos={pagos}
           onRetry={() => void paymentsQ.refetch()}
           onUpload={abrirSubida}
+          onCancel={confirmarCancelacion}
+          cancelling={cancelarSolicitud.isPending}
         />
 
         {/* CTA principal */}
