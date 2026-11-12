@@ -1,6 +1,6 @@
 # Versión y aviso de actualización (técnico)
 
-- **Versión visible:** `web/package.json` (campo `version`) → Ajustes → Acerca de.
+- **Versión visible:** `web/package.json` (campo `version`, hoy 2.0.0) → Ajustes → Acerca de.
 - **Compilación:** `scripts/build-static.sh` fija `NEXT_PUBLIC_APP_BUILD` = `<commit corto>-<fecha UTC>`
   y escribe `out/version.json` con `{version, build, mandatory}`.
 - **Obligatoria:** por defecto `true`. Para una actualización opcional, compila con `APP_UPDATE_MANDATORY=false`.

@@ -2,7 +2,7 @@
 
 Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 
-## Versión 1.0.0 — lanzamiento (12-nov-2026)
+## Versión 2.0.0 — lanzamiento (12-nov-2026)
 
 **Para los mensajeros**
 - Al completar tu ficha, ahora eliges tu **provincia y tu municipio base**.
