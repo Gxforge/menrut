@@ -1,78 +1,47 @@
-import { RouteVisual } from './RouteVisual'
+import { HeroPhoto } from './Mockups'
 
-// Hero + selector de intención. Sin cifras de usuarios, entregas ni cobertura no verificadas.
-export function LandingHero() {
+// Hero oscuro con el mockup de pedido sobre mapa, igual que la composición de referencia.
+export function Hero() {
   return (
-    <section aria-labelledby="titulo" className="relative overflow-hidden">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-12 pt-10 md:grid-cols-2 md:pb-20 md:pt-16">
+    <section aria-labelledby="titulo" className="relative overflow-hidden bg-[#0b1f3f] text-white">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-[#1688f5]/25 blur-3xl"
+      />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:py-24">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1688f5]">MENRUT · Conectamos caminos</p>
-          <h1 id="titulo" className="mt-3 font-extrabold leading-[1.1] text-[#0b2b60] text-4xl md:text-5xl">
-            Cada recorrido conecta una oportunidad.
-          </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-[#3b5378] md:text-lg">
-            Encuentra mensajeros, descubre rutas y conecta personas y negocios a través de una red de
-            servicios de transporte y entrega.
+          <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-[#7cc0ff]">
+            <span aria-hidden="true" className="h-px w-8 bg-[#7cc0ff]" />
+            Mensajería por rutas en Cuba
           </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <h1 id="titulo" className="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+            Encuentra un mensajero
+            <span className="block text-[#5fb2ff]">que cubra tu ruta.</span>
+          </h1>
+          <p className="mt-6 max-w-lg text-base leading-relaxed text-[#c9d8ee] md:text-lg">
+            Indica de dónde sale y a dónde va. Verás a los mensajeros que cubren esa ruta o esa zona, con su
+            cobertura, sus opiniones y su verificación.
+          </p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a
               href="/app/"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-[#1688f5] px-6 text-base font-bold text-white shadow-md hover:bg-[#0f74d4]"
+              className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[#1688f5] px-7 text-base font-bold text-white shadow-lg shadow-[#1688f5]/25 hover:bg-[#0f74d4]"
             >
-              Explorar MENRUT
+              Necesito un mensajero
             </a>
             <a
-              href="#mensajeros"
-              className="inline-flex h-12 items-center justify-center rounded-full border-2 border-[#0b2b60] px-6 text-base font-bold text-[#0b2b60] hover:bg-white"
+              href="/app/"
+              className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-white px-7 text-base font-bold text-[#0b1f3f] hover:bg-[#e8f1fd]"
             >
-              Quiero ofrecer mis servicios
+              Quiero ser mensajero
             </a>
           </div>
-          <p className="mt-4 text-sm text-[#5a6f91]">
-            Buscar y ver mensajeros no requiere cuenta. Para contactar o contratar, sí.
-          </p>
+          <div className="mt-6 inline-flex flex-col rounded-xl border border-white/20 bg-white/5 px-5 py-3">
+            <span className="text-sm font-bold">Ver mensajeros sin cuenta</span>
+            <span className="text-xs text-[#9db3d4]">Buscar y ver perfiles no requiere registrarse</span>
+          </div>
         </div>
-        <RouteVisual />
-      </div>
-      <IntentSelector />
-    </section>
-  )
-}
-
-const INTENTS = [
-  {
-    title: 'Necesito un mensajero',
-    body: 'Indica de dónde sale y a dónde va. Verás los mensajeros que cubren esa ruta o esa zona.',
-    href: '/app/',
-    cta: 'Buscar mensajeros',
-  },
-  {
-    title: 'Soy mensajero',
-    body: 'Crea tu perfil, indica tu municipio base y publica tu cobertura o tus rutas.',
-    href: '/app/',
-    cta: 'Crear mi perfil',
-  },
-  {
-    title: 'Tengo un negocio',
-    body: 'Consulta cobertura y servicios antes de contratar, y guarda los mensajeros que usas.',
-    href: '#negocios',
-    cta: 'Ver cómo me ayuda',
-  },
-]
-
-function IntentSelector() {
-  return (
-    <section aria-label="Elige tu caso" className="border-t border-[#dbe7f7] bg-white">
-      <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 md:grid-cols-3">
-        {INTENTS.map((i) => (
-          <article key={i.title} className="flex flex-col rounded-2xl border border-[#dbe7f7] bg-[#f8fbff] p-6">
-            <h2 className="text-lg font-bold text-[#0b2b60]">{i.title}</h2>
-            <p className="mt-2 flex-1 text-sm leading-relaxed text-[#3b5378]">{i.body}</p>
-            <a href={i.href} className="mt-4 font-bold text-[#1688f5] hover:underline">
-              {i.cta} →
-            </a>
-          </article>
-        ))}
+        <HeroPhoto />
       </div>
     </section>
   )
