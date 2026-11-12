@@ -21,6 +21,15 @@ Esta lista explica en lenguaje sencillo qué cambia en cada versión de la app.
 - Las cuentas de propietario, administración y moderación no se pueden eliminar.
 - La cuenta propietaria (nexolink.core1@gmail.com) está protegida y es la única de administración.
 
+## Versión 2.0.2
+
+**Para los mensajeros**
+- Se corrige un error que cerraba la app al abrir **Membresía** (historial de cartera).
+- Las **opiniones** ahora tienen un máximo de **120 caracteres**, para que sean cortas y claras.
+
+**Para todos**
+- Si sale una versión nueva, verás el aviso «Actualización en proceso».
+
 ## Versión 2.0.1 (12-nov-2026)
 
 **Para la administración**
