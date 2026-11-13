@@ -3,7 +3,7 @@
 Este documento describe **cómo se trabaja en MenRut** y **qué se hizo en la sesión del 13-oct-2026**. Sirve como registro de trabajo para el propietario y para cualquier agente que continúe.
 
 ## 1. Reglas que no se rompen
-- Cambios de código: en rama, con commit descriptivo en español. **Nada se sube ni se despliega sin confirmación del propietario.**
+- Cambios de código: commit descriptivo en español y subida a `main`. **Autorizado por el propietario (2026-10-13): commit y despliegue de cada cambio sin pedir confirmación previa.** Antes de desplegar: tipos, pruebas, regla de 300 líneas y migraciones idempotentes.
 - No escribir valores de tokens en el repositorio, en `docs/` ni en los mensajes. Los tokens se pasan en un archivo aparte que el propietario controla.
 - No usar `git clone https://<token>@…` (deja el token en `.git/config`). Usar `http.extraheader` solo en la sesión.
 - Máximo 300 líneas por archivo (`python3 scripts/quality.py`).
