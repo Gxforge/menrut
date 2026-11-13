@@ -25,6 +25,9 @@ export function getSupabase(): SupabaseClient {
   // Al abrir el enlace del correo, marcamos la recuperación pendiente.
   client.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') markPasswordRecovery()
+    // Sesión de Supabase terminada (caducada, cerrada en otra pestaña o almacenamiento borrado):
+    // la sesión local de la app se cierra también, para no lanzar peticiones sin token.
+    if (event === 'SIGNED_OUT') void endLocalSession()
   })
   return client
 }
@@ -44,4 +47,10 @@ export async function uploadToBucket(bucket: string, file: File, pathPrefix: str
   // Para buckets privados el acceso real se hace con createSignedUrl en el backend;
   // aquí devolvemos la ruta pública si el bucket es público.
   return data.publicUrl
+}
+
+/** Cierra la sesión local de la app (store + caché del chat). Import dinámico: evita ciclos. */
+export async function endLocalSession(): Promise<void> {
+  const { useAppStore } = await import('@/lib/store')
+  if (useAppStore.getState().session) useAppStore.getState().logout()
 }

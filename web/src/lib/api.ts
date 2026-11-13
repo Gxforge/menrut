@@ -37,6 +37,13 @@ export async function req<T>(path: string, init?: RequestInit & { auth?: boolean
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
+    // 401 en una ruta con sesión: la cuenta ya no es válida. Se cierra la sesión local
+    // para volver a la pantalla de entrada en lugar de dejar pantallas con errores.
+    if (res.status === 401 && init?.auth !== false) {
+      const { endLocalSession } = await import('@/lib/supabase')
+      void endLocalSession()
+      throw new Error('Tu sesión caducó. Vuelve a entrar.')
+    }
     throw new Error(body.error || `Error ${res.status}`)
   }
   return res.json() as Promise<T>
