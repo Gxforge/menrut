@@ -40,3 +40,12 @@ export function HomeError({ onRetry }: { onRetry: () => void }) {
     </div>
   )
 }
+
+/** Aviso cuando hay datos guardados en el dispositivo pero el servidor no responde. */
+export function StaleNotice() {
+  return (
+    <div role="status" className="mb-3 rounded-xl border border-line bg-secondary/60 px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
+      Sin conexión con el servidor. Mostramos los últimos datos guardados en este dispositivo.
+    </div>
+  )
+}

@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import { clearChatCache } from '@/lib/chat-cache'
 import { clearQrQueue } from '@/lib/qr-delivery'
+import { clearPersistedQueries } from '@/lib/query-cache'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ScreenId, SessionUser, SearchFilters, CoverageType } from './types'
 
@@ -93,6 +94,7 @@ export const useAppStore = create<AppState>()(
       logout: () => {
         clearChatCache()
         clearQrQueue()
+        clearPersistedQueries()
         set({
           session: null,
           screen: 'home',

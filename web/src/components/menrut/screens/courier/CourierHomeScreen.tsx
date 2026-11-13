@@ -12,7 +12,7 @@ import { initials } from '@/lib/format'
 import { CoverageBadge, PendingSeal, VerifiedSeal } from '@/components/menrut/core/StatusBadge'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { HomeError, HomeLoading } from './CourierHomeScreenPieces/HomeGuards'
+import { HomeError, HomeLoading, StaleNotice } from './CourierHomeScreenPieces/HomeGuards'
 import { VisibilityCard } from './CourierHomeScreenPieces/VisibilityCard'
 import { ActivityMetrics } from './CourierHomeScreenPieces/ActivityMetrics'
 import { QuickAccess } from './CourierHomeScreenPieces/QuickAccess'
@@ -44,7 +44,8 @@ export default function CourierHomeScreen() {
   }
 
   // ── Error ─────────────────────────────────────────────────────────────
-  if (dashQ.isError || !dash) {
+  // Con datos guardados (caché del dispositivo) se muestran aunque la última petición haya fallado.
+  if (!dash) {
     return (
       <HomeError
         onRetry={() => {
@@ -86,6 +87,7 @@ export default function CourierHomeScreen() {
 
   return (
     <div className="px-4 pt-5 pb-8">
+      {dashQ.isError && <StaleNotice />}
       {/* Cabecera: saludo + identidad */}
       <header className="flex items-center gap-3">
         <Avatar className="h-12 w-12 border border-line">
