@@ -56,3 +56,20 @@ test('mensajes antiguos sin columnas nuevas siguen siendo texto', () => {
   assert.equal(dto.kind, 'text');
   assert.equal(dto.refId, null);
 });
+
+test('el código solo lo ve quien lo generó (el cliente); el mensajero no', () => {
+  const row = {
+    ...base,
+    kind: 'delivery_code',
+    ref_id: 'd1',
+    payload: JSON.stringify({ deliveryId: 'd1', code: '484596', expiresAt: Date.now() + 3600_000, status: 'pending' }),
+  };
+  const asClient = messageRow(row, 'client-1').payload as Record<string, unknown>;
+  assert.equal(asClient.code, '484596');
+  const asCourier = messageRow(row, 'courier-9').payload as Record<string, unknown>;
+  assert.equal(asCourier.code, undefined);
+  assert.equal(asCourier.deliveryId, 'd1');
+  assert.equal(asCourier.status, 'pending');
+  // Sin mutar la fila original
+  assert.match(row.payload, /484596/);
+});

@@ -91,6 +91,11 @@ export function messageRow(r: Record<string, unknown>, myId: string): Record<str
       payload = { ...payload, status: 'expired' };
     }
   }
+  // El código solo lo ve quien lo generó (el cliente). El mensajero lo recibe al escanear el QR o de viva voz.
+  if (kind === 'delivery_code' && payload && r.sender_id !== myId) {
+    payload = { ...payload };
+    delete payload.code;
+  }
   return {
     ...toMessageDto(
       {

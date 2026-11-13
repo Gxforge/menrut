@@ -60,7 +60,9 @@ export function EventCard({
   // Un código pendiente o confirmado por el cliente que ya pasó su fecha está vencido.
   const open = p.status === 'pending' || p.status === 'client_confirmed'
   const status: DeliveryCodePayload['status'] = open && p.expiresAt <= Date.now() ? 'expired' : p.status
-  const showCode = status === 'pending' || status === 'client_confirmed'
+  // El código y su QR son del cliente: el mensajero no los ve y verifica escaneando el QR del cliente.
+  const showCode = !viewerIsCourier && (status === 'pending' || status === 'client_confirmed')
+  const canScan = viewerIsCourier && status === 'client_confirmed'
 
   return (
     <div className="mx-auto w-full max-w-[90%] space-y-2.5 rounded-2xl border border-line bg-card px-4 py-3">
@@ -77,12 +79,15 @@ export function EventCard({
 
       <p className="text-[12px] text-muted-foreground">{STATUS_LABEL[status]}</p>
 
+      {showCode && <QrImage text={buildQrPayload(p.deliveryId, p.code)} />}
       {showCode && (
+        <p className="text-center text-[12px] text-muted-foreground">
+          Muéstrale este QR al mensajero para verificar la entrega.
+        </p>
+      )}
+
+      {canScan && (
         <div className="space-y-2">
-          <QrImage text={buildQrPayload(p.deliveryId, p.code)} />
-          <p className="text-center text-[12px] text-muted-foreground">
-            {viewerIsCourier ? 'Escanea el QR del cliente para verificar la entrega.' : 'El mensajero o tú podéis escanear este QR.'}
-          </p>
           {!scanning && (
             <Button
               type="button"
@@ -91,7 +96,7 @@ export function EventCard({
               onClick={() => setScanning(true)}
             >
               <QrCode className="h-4 w-4" aria-hidden />
-              Escanear QR
+              Escanear QR del cliente
             </Button>
           )}
           {scanning && (
