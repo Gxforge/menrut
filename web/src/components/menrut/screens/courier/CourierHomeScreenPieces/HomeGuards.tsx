@@ -33,7 +33,7 @@ export function HomeError({ onRetry }: { onRetry: () => void }) {
       <EmptyState
         icon={<EyeOff className="h-8 w-8" aria-hidden />}
         title="No se pudo cargar tu espacio"
-        hint="Revisa tu conexión. El dashboard sigue disponible aunque tu permanencia esté vencida."
+        hint="En este momento el servidor tiene mucha demanda. Por favor, intente más tarde."
         actionLabel="Reintentar"
         onAction={onRetry}
       />
