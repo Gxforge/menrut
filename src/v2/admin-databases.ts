@@ -8,8 +8,8 @@
 import { nowMs, requireRole, type V2Env } from './core';
 import { requireAuth } from './identity';
 
-const SECONDARY_SUPABASE_URL = 'https://bnubjqsxbcymdsukioes.supabase.co'; // menrut-secundario (reservado)
-const SECONDARY_REF = 'bnubjqsxbcymdsukioes';
+const SECONDARY_SUPABASE_URL = 'https://apbmvyuyoiqwtpelxjck.supabase.co'; // menrut-secundario (reservado)
+const SECONDARY_REF = 'apbmvyuyoiqwtpelxjck';
 
 interface ShardRegistryRow {
   shard_id: number;

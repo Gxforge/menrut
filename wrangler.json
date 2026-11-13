@@ -6,66 +6,66 @@
     {
       "binding": "D1_CORE",
       "database_name": "menrut-core",
-      "database_id": "3383e764-c3a3-40d9-aa71-38f07cfb205a",
+      "database_id": "04ef4293-1645-4fc1-8335-cae8031aab8e",
       "migrations_dir": "database/core/migrations"
     },
     {
       "binding": "D1_SHARD_01",
       "database_name": "menrut-shard-01",
-      "database_id": "abd5f4a5-36ae-499b-bad0-96a41250bb0f",
+      "database_id": "a43aded8-02ca-411d-8df2-4e182452dcfe",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_02",
       "database_name": "menrut-shard-02",
-      "database_id": "4fc1bf6d-86a2-4b9e-b15f-70c4c45c85f6",
+      "database_id": "d68ed896-7b4c-437b-a71d-112c8651de74",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_03",
       "database_name": "menrut-shard-03",
-      "database_id": "c4ce188c-1ac0-40e7-ae91-ae69f8c6437d",
+      "database_id": "8b0eea8a-dba2-42d3-8738-cc174cc7576f",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_04",
       "database_name": "menrut-shard-04",
-      "database_id": "c5b9aa7c-2ed6-476e-bdfa-5c7306e2a807",
+      "database_id": "7c7bdc9f-b176-4086-a1c5-473fcf6da6ad",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_05",
       "database_name": "menrut-shard-05",
-      "database_id": "b13a697f-4980-4f12-bfb4-b374c22942a6",
+      "database_id": "a7c66be8-193e-4f17-bbb8-dde072ff4a0c",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_06",
       "database_name": "menrut-shard-06",
-      "database_id": "bb49fb8e-70f3-4e23-9767-0e41d4df8dad",
+      "database_id": "bc4e47e0-0982-468e-bf52-1463862277de",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_07",
       "database_name": "menrut-shard-07",
-      "database_id": "a4e6b404-87f3-4bdf-b014-232f99d12016",
+      "database_id": "a3b279b5-149f-4406-9523-ceb99ed8b98e",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_08",
       "database_name": "menrut-shard-08",
-      "database_id": "ce550417-56e4-476b-9bb3-2c6ab3d9cff4",
+      "database_id": "6a4df4e5-1e00-41b4-a454-d3fe4e2b63d0",
       "migrations_dir": "database/shard/migrations"
     },
     {
       "binding": "D1_SHARD_09",
       "database_name": "menrut-shard-09",
-      "database_id": "c14b9577-5767-4e68-a5b0-365c82a4e1c6",
+      "database_id": "0d253c60-883e-4ca3-9717-679cbf98b580",
       "migrations_dir": "database/shard/migrations"
     }
   ],
   "vars": {
-    "SUPABASE_URL": "https://orqskfecwtroppqimhnj.supabase.co",
+    "SUPABASE_URL": "https://rblwyhtjfqvdymetgyya.supabase.co",
     "ALLOWED_ORIGIN": "https://menrut.pages.dev"
   }
 }

@@ -29,7 +29,7 @@ jobs:
       - name: Build estático de la web
         working-directory: web
         env:
-          NEXT_PUBLIC_SUPABASE_URL: https://orqskfecwtroppqimhnj.supabase.co
+          NEXT_PUBLIC_SUPABASE_URL: https://rblwyhtjfqvdymetgyya.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
         run: bash scripts/build-static.sh
       # Pruebas HTTP contra el backend local (D1 local + Pages Functions).

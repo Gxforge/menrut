@@ -12,18 +12,18 @@ import sys
 import urllib.error
 import urllib.request
 
-ACC = "665fb2e43961e57d2f22283c6dec7d5c"  # verificado: d1.py / d1q.py
-CORE = "3383e764-c3a3-40d9-aa71-38f07cfb205a"  # verificado: wrangler.json menrut-core
+ACC = "57efaa518a543ded7b31b026b6d83dc4"  # verificado: d1.py / d1q.py
+CORE = "04ef4293-1645-4fc1-8335-cae8031aab8e"  # verificado: wrangler.json menrut-core
 SHARDS = {  # verificado: wrangler.json menrut-shard-01 .. 09
-    1: "abd5f4a5-36ae-499b-bad0-96a41250bb0f",
-    2: "4fc1bf6d-86a2-4b9e-b15f-70c4c45c85f6",
-    3: "c4ce188c-1ac0-40e7-ae91-ae69f8c6437d",
-    4: "c5b9aa7c-2ed6-476e-bdfa-5c7306e2a807",
-    5: "b13a697f-4980-4f12-bfb4-b374c22942a6",
-    6: "bb49fb8e-70f3-4e23-9767-0e41d4df8dad",
-    7: "a4e6b404-87f3-4bdf-b014-232f99d12016",
-    8: "ce550417-56e4-476b-9bb3-2c6ab3d9cff4",
-    9: "c14b9577-5767-4e68-a5b0-365c82a4e1c6",
+    1: "a43aded8-02ca-411d-8df2-4e182452dcfe",
+    2: "d68ed896-7b4c-437b-a71d-112c8651de74",
+    3: "8b0eea8a-dba2-42d3-8738-cc174cc7576f",
+    4: "7c7bdc9f-b176-4086-a1c5-473fcf6da6ad",
+    5: "a7c66be8-193e-4f17-bbb8-dde072ff4a0c",
+    6: "bc4e47e0-0982-468e-bf52-1463862277de",
+    7: "a3b279b5-149f-4406-9523-ceb99ed8b98e",
+    8: "6a4df4e5-1e00-41b4-a454-d3fe4e2b63d0",
+    9: "0d253c60-883e-4ca3-9717-679cbf98b580",
 }
 REPO = str(Path(__file__).resolve().parents[1] / "database")
 TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "")

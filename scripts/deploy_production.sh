@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # MENRUT — Despliegue de producción en UN comando (migraciones + web + API).
 # Requiere: export CLOUDFLARE_API_TOKEN=... con D1:edit, Pages:edit y
-# Workers:edit de la cuenta 665fb2e43961e57d2f22283c6dec7d5c.
+# Workers:edit de la cuenta 57efaa518a543ded7b31b026b6d83dc4 (Menrut.oficial).
 # Pasos:
 #   1) Verificación local completa (typecheck, pruebas, regla 300 líneas).
 #   2) Migraciones idempotentes a las 10 bases D1 de producción.

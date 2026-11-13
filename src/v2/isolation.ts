@@ -5,7 +5,7 @@
 // al principal. Se comprueba en cada request (ver router.ts).
 import { HttpError, type V2Env } from './core';
 
-export const PRODUCTION_SUPABASE_HOST = 'orqskfecwtroppqimhnj.supabase.co';
+export const PRODUCTION_SUPABASE_HOST = 'rblwyhtjfqvdymetgyya.supabase.co';
 
 export function assertSupabaseIsolation(env: V2Env): void {
   if (!env.SUPABASE_URL) return; // sin auth configurada (p. ej. CI local).

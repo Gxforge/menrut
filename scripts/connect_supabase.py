@@ -3,7 +3,7 @@ import json,secrets,urllib.request,urllib.error
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 env=dict(l.split('=',1) for l in (root/'.env').read_text().splitlines() if '=' in l)
-ref='orqskfecwtroppqimhnj'
+ref='rblwyhtjfqvdymetgyya'
 def api(path,method='GET',body=None):
  req=urllib.request.Request('https://api.supabase.com/v1/'+path,method=method,headers={'Authorization':'Bearer '+env['SUPABASE_ACCESS_TOKEN'],'Content-Type':'application/json'},data=json.dumps(body).encode() if body is not None else None)
  try:

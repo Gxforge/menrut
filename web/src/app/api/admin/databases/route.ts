@@ -17,7 +17,7 @@ const CF_TIMEOUT_MS = 12_000
 const CF_ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID ?? ''
 const CF_TOKEN = process.env.CLOUDFLARE_API_TOKEN ?? ''
 const SB_TOKEN = process.env.SUPABASE_ACCESS_TOKEN ?? ''
-const SB_SECONDARY_URL = 'https://bnubjqsxbcymdsukioes.supabase.co'
+const SB_SECONDARY_URL = 'https://apbmvyuyoiqwtpelxjck.supabase.co'
 
 async function fetchJson(url: string, headers: Record<string, string>): Promise<unknown> {
   const res = await fetch(url, { headers, signal: AbortSignal.timeout(CF_TIMEOUT_MS), cache: 'no-store' })
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
 
     // ── Supabase: principal (producción) + secundario (reservado) ──
     const projects: SupabaseProjectDto[] = []
-    const principalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://orqskfecwtroppqimhnj.supabase.co'
+    const principalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://rblwyhtjfqvdymetgyya.supabase.co'
     projects.push({
       name: 'menrut-principal',
       ref: principalUrl.replace('https://', '').split('.')[0],

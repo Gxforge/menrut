@@ -2,7 +2,7 @@
 # MENRUT — Despliega el worker del cron de reconciliación y comparte su
 # secreto con el proyecto Pages (la misma variable CRON_SECRET en ambos).
 # Requiere: export CLOUDFLARE_API_TOKEN=... (permisos Workers:edit,
-# Pages:edit y D1:read de la cuenta 665fb2e43961e57d2f22283c6dec7d5c).
+# Pages:edit y D1:read de la cuenta 57efaa518a543ded7b31b026b6d83dc4 (Menrut.oficial)).
 set -euo pipefail
 cd "$(dirname "$0")/../workers/reconciler"
 

@@ -4,7 +4,7 @@ import {publicProfile} from '../../src/modules/directory';
 import {profileHTML} from '../../src/public/profile-html';
 import {rateLimit} from '../../src/core/rate-limit';
 export const onRequestGet:PagesFunction<Env>=async({params,env,request})=>{
- const headers={'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://orqskfecwtroppqimhnj.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'"};
+ const headers={'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; img-src 'self' https://rblwyhtjfqvdymetgyya.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'"};
  try{
   const slug=String(params.slug);
   if(!/^[a-z0-9-]{1,80}$/.test(slug))throw new ApiError('NOT_FOUND',404);
