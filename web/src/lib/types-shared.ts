@@ -182,6 +182,18 @@ export interface ConversationDto {
   unread: number
 }
 
+// Eventos del chat (v2.2): código de entrega y encargo. Los mensajes de texto no llevan kind.
+export interface DeliveryCodePayload {
+  deliveryId: string
+  code: string
+  expiresAt: number // ms
+  status: 'pending' | 'client_confirmed' | 'confirmed' | 'cancelled' | 'expired'
+}
+
+export interface EncargoPayload {
+  description: string
+}
+
 export interface MessageDto {
   id: string
   conversationId: string
@@ -190,6 +202,9 @@ export interface MessageDto {
   body: string
   readAt: string | null
   createdAt: string
+  kind?: 'text' | 'delivery_code' | 'encargo'
+  refId?: string | null
+  payload?: DeliveryCodePayload | EncargoPayload | null
 }
 
 // ─── Notificaciones ─────────────────────────────────────────────────────────

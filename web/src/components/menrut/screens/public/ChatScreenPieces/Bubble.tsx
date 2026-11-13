@@ -5,11 +5,32 @@ import { AlertCircle, Check, CheckCheck, Clock3 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { ChatBubble } from './data'
+import { EventCard, type EventActions } from './EventCard'
 
 // ─── Burbuja de mensaje ─────────────────────────────────────────────────────
 
-export function Bubble({ bubble: b, onRetry }: { bubble: ChatBubble; onRetry: () => void }) {
+export function Bubble({
+  bubble: b,
+  onRetry,
+  viewerIsCourier,
+  actions,
+}: {
+  bubble: ChatBubble
+  onRetry: () => void
+  viewerIsCourier: boolean
+  actions: EventActions
+}) {
   const time = new Date(b.createdAt).toLocaleTimeString('es-CU', { hour: '2-digit', minute: '2-digit' })
+
+  // Eventos (código de entrega y encargo): tarjeta centrada, sin burbuja de texto.
+  if (b.kind !== 'text') {
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <EventCard bubble={b} viewerIsCourier={viewerIsCourier} actions={actions} />
+        <span className="text-[10px] text-muted-foreground">{time}</span>
+      </div>
+    )
+  }
 
   if (!b.mine) {
     return (

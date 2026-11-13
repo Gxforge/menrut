@@ -5,7 +5,10 @@ import type { RefObject } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { EmptyState } from '@/components/menrut/core/EmptyState'
 import type { ChatBubble } from './data'
+import type { EventActions } from './EventCard'
 import { Bubble, BubbleSkeleton } from './Bubble'
+import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 
 export function MessageList({
   scrollRef,
@@ -15,6 +18,11 @@ export function MessageList({
   onRetryLoad,
   bubbles,
   onRetry,
+  hasMore,
+  loadingOlder,
+  onLoadOlder,
+  viewerIsCourier,
+  actions,
 }: {
   scrollRef: RefObject<HTMLDivElement | null>
   endRef: RefObject<HTMLDivElement | null>
@@ -23,6 +31,11 @@ export function MessageList({
   onRetryLoad: () => void
   bubbles: ChatBubble[]
   onRetry: (key: string) => void
+  hasMore: boolean
+  loadingOlder: boolean
+  onLoadOlder: () => void
+  viewerIsCourier: boolean
+  actions: EventActions
 }) {
   return (
     <div ref={scrollRef} className="nice-scroll flex-1 overflow-y-auto px-4 py-3" aria-label="Mensajes">
@@ -56,9 +69,29 @@ export function MessageList({
           <p className="pb-2 text-center text-[10.5px] leading-relaxed text-muted-foreground">
             Las condiciones del servicio se coordinan entre ambas partes.
           </p>
+          {hasMore && (
+            <div className="pb-2 text-center">
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-8 rounded-full px-3 text-[11.5px]"
+                onClick={onLoadOlder}
+                disabled={loadingOlder}
+              >
+                {loadingOlder && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                Cargar mensajes anteriores
+              </Button>
+            </div>
+          )}
           <div className="space-y-2.5">
             {bubbles.map((b) => (
-              <Bubble key={b.key} bubble={b} onRetry={() => onRetry(b.key)} />
+              <Bubble
+                key={b.key}
+                bubble={b}
+                onRetry={() => onRetry(b.key)}
+                viewerIsCourier={viewerIsCourier}
+                actions={actions}
+              />
             ))}
           </div>
         </>

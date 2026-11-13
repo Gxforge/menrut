@@ -1,6 +1,6 @@
 // MENRUT — ChatScreen · tipos, constantes y utilidades puras del chat.
 import { getChatSocket } from '@/lib/socket'
-import type { MessageDto, Role } from '@/lib/types'
+import type { DeliveryCodePayload, EncargoPayload, MessageDto, Role } from '@/lib/types'
 
 // ─── Tipos locales ──────────────────────────────────────────────────────────
 
@@ -13,6 +13,8 @@ export interface ChatBubble {
   createdMs: number
   readAt: string | null
   status: 'sending' | 'sent' | 'error'
+  kind: 'text' | 'delivery_code' | 'encargo'
+  payload: DeliveryCodePayload | EncargoPayload | null
 }
 
 export function toBubble(m: MessageDto): ChatBubble {
@@ -26,6 +28,8 @@ export function toBubble(m: MessageDto): ChatBubble {
     createdMs: ms,
     readAt: m.readAt,
     status: 'sent',
+    kind: m.kind ?? 'text',
+    payload: m.payload ?? null,
   }
 }
 
@@ -40,6 +44,8 @@ export function makeLocal(body: string): ChatBubble {
     createdMs: now,
     readAt: null,
     status: 'sending',
+    kind: 'text',
+    payload: null,
   }
 }
 

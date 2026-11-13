@@ -1,5 +1,6 @@
 // MENRUT — Store global de navegación y sesión (Zustand)
 import { create } from 'zustand'
+import { clearChatCache } from '@/lib/chat-cache'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ScreenId, SessionUser, SearchFilters, CoverageType } from './types'
 
@@ -88,13 +89,16 @@ export const useAppStore = create<AppState>()(
 
       setSession: (u) => set({ session: u }),
 
-      logout: () => set({
-        session: null,
-        screen: 'home',
-        history: [],
-        selectedCourierId: null,
-        activeConversationId: null,
-      }),
+      logout: () => {
+        clearChatCache()
+        set({
+          session: null,
+          screen: 'home',
+          history: [],
+          selectedCourierId: null,
+          activeConversationId: null,
+        })
+      },
 
       setSearch: (patch) => set({ search: { ...get().search, ...patch } }),
 

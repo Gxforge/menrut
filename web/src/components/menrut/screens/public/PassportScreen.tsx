@@ -36,7 +36,6 @@ export default function PassportScreen() {
   const back = useAppStore((s) => s.back)
   const history = useAppStore((s) => s.history)
   const openConversation = useAppStore((s) => s.openConversation)
-
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [showAllReviews, setShowAllReviews] = useState(false)
@@ -45,7 +44,6 @@ export default function PassportScreen() {
   const [reviewComment, setReviewComment] = useState('')
   const [deliveryCodeOpen, setDeliveryCodeOpen] = useState(false)
   const [reviewDeliveryId, setReviewDeliveryId] = useState<string | null>(null)
-
   const passportQuery = useQuery({
     queryKey: ['passport', selectedCourierId],
     queryFn: () => {

@@ -56,6 +56,7 @@ import { adminDatabases } from './admin-databases';
 import { adminSystem } from './admin-system';
 import { confirmToolUse, listMyTools, releaseToolReservation, reserveTool } from './tools-reserve';
 import { courierDeliveries, createDelivery, myDeliveries, verifyDelivery } from './deliveries';
+import { cancelDeliveryCode, clientConfirmReceipt, confirmDeliveryCode, createEncargo, cronChatRetention, requestDeliveryCode } from './chat-code';
 import { respondReview } from './courier-reviews';
 import { cronReconcile } from './reconcile';
 
@@ -130,6 +131,9 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
   if (method === 'GET' && path[0] === 'deliveries' && path[1] === 'mine' && path.length === 2) {
     return { json: await myDeliveries(request, env) };
   }
+  if (method === 'POST' && path[0] === 'cron' && path[1] === 'chat-retention' && path.length === 2) {
+    return { json: await cronChatRetention(request, env), headers: { 'Cache-Control': 'no-store' } };
+  }
   if (method === 'POST' && path[0] === 'cron' && path[1] === 'reconcile' && path.length === 2) {
     return { json: await cronReconcile(request, env), headers: { 'Cache-Control': 'no-store' } };
   }
@@ -149,6 +153,22 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
   if (path[0] === 'conversations') {
     if (method === 'GET' && path.length === 1) return { json: await listConversations(request, env) };
     if (method === 'POST' && path.length === 1) return { json: await startConversation(request, env, body) };
+    // Código de entrega por chat y encargos (v2.2).
+    if (method === 'POST' && path.length === 3 && path[2] === 'delivery-code') {
+      return { json: await requestDeliveryCode(request, env, path[1]) };
+    }
+    if (method === 'POST' && path.length === 4 && path[2] === 'delivery-code' && path[3] === 'client-confirm') {
+      return { json: await clientConfirmReceipt(request, env, path[1], body) };
+    }
+    if (method === 'POST' && path.length === 4 && path[2] === 'delivery-code' && path[3] === 'cancel') {
+      return { json: await cancelDeliveryCode(request, env, path[1], body) };
+    }
+    if (method === 'POST' && path.length === 4 && path[2] === 'delivery-code' && path[3] === 'confirm') {
+      return { json: await confirmDeliveryCode(request, env, path[1], body) };
+    }
+    if (method === 'POST' && path.length === 3 && path[2] === 'encargos') {
+      return { json: await createEncargo(request, env, path[1], body) };
+    }
     if (path.length === 3 && path[2] === 'messages') {
       if (method === 'GET') return { json: await listMessages(request, env, path[1]) };
       if (method === 'POST') return { json: await sendMessage(request, env, path[1], body) };

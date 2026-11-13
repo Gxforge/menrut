@@ -72,7 +72,7 @@ export default function PrivacyScreen() {
           title="Cuánto tiempo los guardamos"
           items={[
             'Tu cuenta y tu actividad: mientras la cuenta esté activa.',
-            'Mensajes: hasta que elimines tu cuenta o borres la conversación.',
+            'Mensajes del chat: 24 horas en nuestros servidores. En tu dispositivo se conservan 2 días más (3 días en total) y después se borran. Al cerrar sesión se borran del dispositivo.',
             'Registros de pagos: sin datos personales, por obligación contable.',
             'Registros de seguridad (denuncias y moderación): hasta 12 meses.',
           ]}

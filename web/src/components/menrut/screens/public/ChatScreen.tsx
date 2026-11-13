@@ -8,9 +8,11 @@
 // al fallar. No se afirma lectura sin confirmación del servidor (readAt).
 // El estado visual se DERIVA (servidor + entrantes en vivo + pendientes locales)
 // en lugar de sincronizarse con efectos.
+// Retención: servidor 24 h; dispositivo 3 días en total (lib/chat-cache).
 //
-// Piezas de esta pantalla en ./ChatScreenPieces/ (datos y envío, burbujas,
-// cabecera, lista, composición y reporte); AppRouter sigue importando aquí.
+// Piezas de esta pantalla en ./ChatScreenPieces/ (datos y envío, historial,
+// burbujas, eventos de entrega, cabecera, lista, composición y reporte);
+// AppRouter sigue importando aquí.
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
@@ -24,10 +26,14 @@ import type { MessageDto } from '@/lib/types'
 import { getServerSnapshot, getSocketSnapshot, subscribeSocketStatus, toBubble, type ChatBubble } from './ChatScreenPieces/data'
 import { useChatRoom } from './ChatScreenPieces/useChatRoom'
 import { useChatSend } from './ChatScreenPieces/useChatSend'
+import { useChatHistory } from './ChatScreenPieces/useChatHistory'
+import { useChatActions } from './ChatScreenPieces/useChatActions'
 import { ChatHeader } from './ChatScreenPieces/ChatHeader'
 import { MessageList } from './ChatScreenPieces/MessageList'
 import { Composer } from './ChatScreenPieces/Composer'
 import { ReportDialog } from './ChatScreenPieces/ReportDialog'
+import { EncargoDialog } from './ChatScreenPieces/EncargoDialog'
+import { ChatActionBar } from './ChatScreenPieces/ChatActionBar'
 
 // ─── Pantalla ───────────────────────────────────────────────────────────────
 
@@ -43,6 +49,9 @@ export default function ChatScreen() {
   const [draft, setDraft] = useState('')
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState('')
+  const [encargoOpen, setEncargoOpen] = useState(false)
+
+  const isCourier = session?.role === 'courier'
 
   const live = useSyncExternalStore(subscribeSocketStatus, getSocketSnapshot, getServerSnapshot)
 
@@ -70,6 +79,12 @@ export default function ChatScreen() {
     refetchIntervalInBackground: false,
   })
 
+  // Servidor (página reciente + anteriores) + caché del dispositivo, sin duplicados
+  const chat = useChatHistory(conversationId, history.data, incoming)
+
+  // Acciones de entrega y encargo (código por chat, v2.2)
+  const actions = useChatActions(conversationId ?? '', qc)
+
   // Datos del otro (rol) para el subtítulo de la barra
   const conversations = useQuery({
     queryKey: ['conversations', session?.id],
@@ -83,7 +98,7 @@ export default function ChatScreen() {
 
   // ── Burbujas DERIVADAS: servidor + entrantes en vivo + pendientes locales ──
   const bubbles = useMemo<ChatBubble[]>(() => {
-    const base = history.data?.messages ?? []
+    const base = chat.messages
     const baseIds = new Set(base.map((m) => m.id))
     const extra = incoming.filter((m) => !baseIds.has(m.id))
     const server = [...base, ...extra]
@@ -100,7 +115,7 @@ export default function ChatScreen() {
       return true // enviando o con error
     })
     return [...server, ...locals]
-  }, [history.data, history.dataUpdatedAt, incoming, pending])
+  }, [chat.messages, history.dataUpdatedAt, incoming, pending])
 
   // Refresca la bandeja (badge de no leídos) al cargar el historial
   useEffect(() => {
@@ -219,6 +234,24 @@ export default function ChatScreen() {
         onRetryLoad={() => history.refetch()}
         bubbles={bubbles}
         onRetry={retry}
+        hasMore={chat.hasMore}
+        loadingOlder={chat.loadingOlder}
+        onLoadOlder={chat.loadOlder}
+        viewerIsCourier={isCourier}
+        actions={{
+          clientConfirm: (deliveryId) => actions.clientConfirm.mutate(deliveryId),
+          cancelCode: (deliveryId) => actions.cancelCode.mutate(deliveryId),
+          verifyCode: (deliveryId, code) => actions.verifyCode.mutate({ deliveryId, code }),
+          busy: actions.clientConfirm.isPending || actions.cancelCode.isPending || actions.verifyCode.isPending,
+        }}
+      />
+
+      {/* Acciones de entrega: el cliente pide código; el mensajero registra el encargo */}
+      <ChatActionBar
+        isCourier={isCourier}
+        requestPending={actions.requestCode.isPending}
+        onRequestCode={() => actions.requestCode.mutate()}
+        onOpenEncargo={() => setEncargoOpen(true)}
       />
 
       {/* Composición: fija al fondo del frame, compacta para el teclado móvil */}
@@ -229,6 +262,16 @@ export default function ChatScreen() {
         onInput={autoResize}
         onKeyDown={onKeyDown}
         onSubmit={submit}
+      />
+
+      {/* Crear encargo (mensajero) */}
+      <EncargoDialog
+        open={encargoOpen}
+        onOpenChange={setEncargoOpen}
+        pending={actions.createEncargo.isPending}
+        onSubmit={(description) => {
+          actions.createEncargo.mutate(description, { onSuccess: () => setEncargoOpen(false) })
+        }}
       />
 
       {/* Reportar conversación */}

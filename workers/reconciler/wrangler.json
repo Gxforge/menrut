@@ -3,9 +3,13 @@
   "main": "index.ts",
   "compatibility_date": "2026-05-01",
   "triggers": {
-    "crons": ["17 */6 * * *"]
+    "crons": [
+      "17 */6 * * *",
+      "5 * * * *"
+    ]
   },
   "vars": {
-    "RECONCILE_URL": "https://menrut.pages.dev/api/v2/cron/reconcile"
+    "RECONCILE_URL": "https://menrut.pages.dev/api/v2/cron/reconcile",
+    "CHAT_RETENTION_URL": "https://menrut.pages.dev/api/v2/cron/chat-retention"
   }
 }

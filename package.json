@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "typecheck": "tsc && tsc -p web/tsconfig.json",
-    "test": "tsx --test tests/*.test.ts && python3 tests/database_test.py",
+    "test": "tsx --test tests/*.test.ts && python3 tests/database_test.py && python3 tests/chat_codes_test.py",
     "quality": "python3 scripts/quality.py",
     "check": "npm run typecheck && npm test && npm run quality && npm run build",
     "dev": "cd web && bun run dev",

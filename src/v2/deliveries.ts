@@ -16,16 +16,16 @@ import {
 import { requireAuth } from './identity';
 import { assignedShard, syncProjection } from './shard';
 
-const DELIVERY_TTL_SEC = 86400; // 24 h de validez del código.
-const MAX_ATTEMPTS = 5;
+export const DELIVERY_TTL_SEC = 86400; // 24 h de validez del código.
+export const MAX_ATTEMPTS = 5;
 
-async function hashCode(id: string, code: string): Promise<string> {
+export async function hashCode(id: string, code: string): Promise<string> {
   const data = new TextEncoder().encode(`menrut-otp:${id}:${code}`);
   const digest = await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function randomCode(): string {
+export function randomCode(): string {
   const bytes = new Uint8Array(3);
   crypto.getRandomValues(bytes);
   const n = ((bytes[0] << 16) | (bytes[1] << 8) | bytes[2]) % 1000000;
@@ -66,7 +66,7 @@ export async function createDelivery(request: Request, env: V2Env, body: Record<
   // Un código pendiente por mensajero·cliente: se reemplaza el anterior.
   const nowSec = Math.floor(nowMs() / 1000);
   await shard.db
-    .prepare('DELETE FROM delivery_verifications WHERE courier_id=? AND client_id=? AND confirmed_at IS NULL')
+    .prepare('DELETE FROM delivery_verifications WHERE courier_id=? AND client_id=? AND confirmed_at IS NULL AND conversation_id IS NULL')
     .bind(courierId, user.id)
     .run();
 
@@ -142,33 +142,25 @@ export async function courierDeliveries(request: Request, env: V2Env): Promise<R
   return { deliveries: rows.map((r) => toDeliveryDto(r, names.get(r.client_id as string) ?? 'Cliente')) };
 }
 
-/** ─── POST /courier/me/deliveries/:id/verify — el mensajero acredita con el código ── */
-export async function verifyDelivery(request: Request, env: V2Env, deliveryId: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const { user } = await requireAuth(request, env);
-  requireExactRole(user.role, 'courier');
-  await checkRate(env, `verify:${user.id}`, 30, 60_000);
-  const shard = await assignedShard(env, user.id);
-  if (!shard) throw new HttpError(409, 'Tu perfil de mensajero no está creado.');
-  const db = shard.db;
-
-  const code = (asString(body.code) ?? '').trim();
-  if (!/^\d{6}$/.test(code)) throw new HttpError(400, 'El código tiene 6 dígitos.');
-
-  const row = await db
-    .prepare('SELECT * FROM delivery_verifications WHERE id=? AND courier_id=? LIMIT 1')
-    .bind(deliveryId, user.id)
-    .first<Record<string, unknown>>();
-  if (!row) throw new HttpError(404, 'Entrega no encontrada.');
+/** Acredita una entrega con su código. Lo usan el flujo antiguo (OTP) y el chat. */
+export async function confirmVerification(
+  env: V2Env,
+  courier: { id: string; fullName: string },
+  db: D1Database,
+  row: Record<string, unknown>,
+  code: string,
+): Promise<number> {
+  const deliveryId = row.id as string;
   if (row.confirmed_at) throw new HttpError(409, 'Esta entrega ya está verificada.');
+  if (row.cancelled_at) throw new HttpError(409, 'Este código fue cancelado.');
   if ((row.attempts as number) >= MAX_ATTEMPTS) {
     throw new HttpError(429, 'Demasiados intentos. Pide al cliente un código nuevo.');
   }
   const nowSec = Math.floor(nowMs() / 1000);
   if ((row.expires_at as number) <= nowSec) throw new HttpError(410, 'El código venció. Pide al cliente uno nuevo.');
 
-  const expected = row.code_hash as string;
   const actual = await hashCode(deliveryId, code);
-  if (actual !== expected) {
+  if (actual !== (row.code_hash as string)) {
     await db.prepare('UPDATE delivery_verifications SET attempts=attempts+1 WHERE id=?').bind(deliveryId).run();
     throw new HttpError(400, 'Código incorrecto.');
   }
@@ -178,7 +170,7 @@ export async function verifyDelivery(request: Request, env: V2Env, deliveryId: s
       `UPDATE courier_profiles SET verified_deliveries=verified_deliveries+1, version=version+1, updated_at=unixepoch()
        WHERE user_id=? RETURNING verified_deliveries`
     )
-    .bind(user.id)
+    .bind(courier.id)
     .first<{ verified_deliveries: number }>();
   await db.batch([
     db.prepare('UPDATE delivery_verifications SET confirmed_at=? WHERE id=?').bind(nowSec, deliveryId),
@@ -187,15 +179,35 @@ export async function verifyDelivery(request: Request, env: V2Env, deliveryId: s
         `INSERT OR IGNORE INTO shard_outbox(id,user_id,version)
          SELECT 'profile:'||user_id||':'||version, user_id, version FROM courier_profiles WHERE user_id=?`
       )
-      .bind(user.id),
+      .bind(courier.id),
   ]);
-  await syncProjection(env, user.id).catch(() => null);
+  await syncProjection(env, courier.id).catch(() => null);
   await env.D1_CORE
     .prepare("INSERT INTO notifications(id,user_id,category,title,body) VALUES(?,?,'entrega','Entrega verificada',?)")
-    .bind(newId(), row.client_id as string, `${user.fullName} verificó tu entrega con el código. ¡Gracias por confirmar tu recepción!`)
+    .bind(newId(), row.client_id as string, `${courier.fullName} verificó tu entrega con el código. ¡Gracias por confirmar tu recepción!`)
     .run();
+  return agg?.verified_deliveries ?? 0;
+}
 
-  return { ok: true, verifiedDeliveries: agg?.verified_deliveries ?? 0 };
+/** ─── POST /courier/me/deliveries/:id/verify — el mensajero acredita con el código (flujo antiguo) ── */
+export async function verifyDelivery(request: Request, env: V2Env, deliveryId: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { user } = await requireAuth(request, env);
+  requireExactRole(user.role, 'courier');
+  await checkRate(env, `verify:${user.id}`, 30, 60_000);
+  const shard = await assignedShard(env, user.id);
+  if (!shard) throw new HttpError(409, 'Tu perfil de mensajero no está creado.');
+
+  const code = (asString(body.code) ?? '').trim();
+  if (!/^\d{6}$/.test(code)) throw new HttpError(400, 'El código tiene 6 dígitos.');
+
+  const row = await shard.db
+    .prepare('SELECT * FROM delivery_verifications WHERE id=? AND courier_id=? LIMIT 1')
+    .bind(deliveryId, user.id)
+    .first<Record<string, unknown>>();
+  if (!row) throw new HttpError(404, 'Entrega no encontrada.');
+
+  const verifiedDeliveries = await confirmVerification(env, user, shard.db, row, code);
+  return { ok: true, verifiedDeliveries };
 }
 
 /** Enlaza una reseña con una entrega verificada (usa passport.submitReview). */

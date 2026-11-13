@@ -10,6 +10,7 @@ import {
 } from './core';
 import { loadAccount, requireAuth } from './identity';
 import { toMessageDto, toNotificationDto } from './dto';
+import { messageRow } from './chat-code';
 
 // ─── /conversations ─────────────────────────────────────────────────────────
 const CONV_SELECT = `SELECT c.id, c.client_id AS clientId, c.courier_id AS courierId, c.last_message_at AS lastMessageAt,
@@ -128,24 +129,23 @@ export async function listMessages(request: Request, env: V2Env, conversationId:
     .bind(Math.floor(nowMs() / 1000), conversationId, user.id)
     .run();
 
+  // Paginación: primero los más recientes; «before» es el rowid del mensaje más antiguo ya cargado.
+  const url = new URL(request.url);
+  const before = Math.max(0, Number(url.searchParams.get('before') ?? '0') || 0);
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? '30') || 30));
   const rows = await env.D1_CORE
-    .prepare('SELECT * FROM messages WHERE conversation_id=? ORDER BY created_at ASC LIMIT 200')
-    .bind(conversationId)
+    .prepare(
+      'SELECT rowid AS rid, * FROM messages WHERE conversation_id=? AND (?=0 OR rowid<?) ORDER BY rowid DESC LIMIT ?',
+    )
+    .bind(conversationId, before, before, limit + 1)
     .all();
+  const list = (rows.results ?? []) as Array<Record<string, unknown>>;
+  const hasMore = list.length > limit;
+  const page = list.slice(0, limit).reverse();
   return {
-    messages: ((rows.results ?? []) as Array<Record<string, unknown>>).map((m) =>
-      toMessageDto(
-        {
-          id: m.id as string,
-          conversationId: m.conversation_id as string,
-          senderId: m.sender_id as string,
-          body: m.body as string,
-          readAt: (m.read_at as number | null) ?? null,
-          createdAt: (m.created_at as number) * 1000,
-        },
-        user.id,
-      ),
-    ),
+    messages: page.map((m) => messageRow(m, user.id)),
+    hasMore,
+    nextBefore: hasMore && page.length > 0 ? (page[0].rid as number) : null,
   };
 }
 

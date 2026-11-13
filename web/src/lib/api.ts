@@ -126,8 +126,36 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ courierUserId }),
     }),
-  messages: (conversationId: string) =>
-    req<{ messages: MessageDto[] }>(`/conversations/${conversationId}/messages`),
+  // Últimos mensajes; «before» (rowid del más antiguo cargado) pide la página anterior.
+  messages: (conversationId: string, before?: number | null) =>
+    req<{ messages: MessageDto[]; hasMore?: boolean; nextBefore?: number | null }>(
+      `/conversations/${conversationId}/messages${before ? `?before=${before}` : ''}`,
+    ),
+  requestDeliveryCode: (conversationId: string) =>
+    req<{ message: MessageDto; reused: boolean }>(`/conversations/${conversationId}/delivery-code`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+  clientConfirmReceipt: (conversationId: string, deliveryId: string) =>
+    req<{ ok: true }>(`/conversations/${conversationId}/delivery-code/client-confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ deliveryId }),
+    }),
+  cancelDeliveryCode: (conversationId: string, deliveryId: string) =>
+    req<{ ok: true }>(`/conversations/${conversationId}/delivery-code/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ deliveryId }),
+    }),
+  verifyDeliveryCode: (conversationId: string, deliveryId: string, code: string) =>
+    req<{ ok: true; verifiedDeliveries: number }>(`/conversations/${conversationId}/delivery-code/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ deliveryId, code }),
+    }),
+  createEncargo: (conversationId: string, description: string) =>
+    req<{ message: MessageDto; hired: true }>(`/conversations/${conversationId}/encargos`, {
+      method: 'POST',
+      body: JSON.stringify({ description }),
+    }),
   sendMessage: (conversationId: string, body: string) =>
     req<{ message: MessageDto }>(`/conversations/${conversationId}/messages`, {
       method: 'POST',

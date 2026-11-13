@@ -67,7 +67,6 @@ export async function passport(request: Request, env: V2Env, courierId: string):
     .bind(courierId)
     .first<Record<string, unknown>>();
   if (!row) throw new HttpError(404, 'Mensajero no encontrado.');
-
   // 2) Visibilidad: vigencia efectiva filtra el directorio; dueño/admin ven todo.
   const identity = await verifySupabaseToken(request, env);
   let viewerId: string | null = null;
@@ -92,7 +91,6 @@ export async function passport(request: Request, env: V2Env, courierId: string):
   if (!visible && !isOwner && !isStaff) {
     throw new HttpError(404, 'Este pasaporte no está disponible públicamente.');
   }
-
   // 3) Detalle desde UN único shard (el dueño).
   const shard = await assignedShard(env, courierId);
   if (!shard) throw new HttpError(404, 'Mensajero no encontrado.');

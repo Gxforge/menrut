@@ -22,6 +22,7 @@ npm run quality
 
 echo "── 2/3 Migraciones de producción (10 bases, idempotentes) ──"
 python3 scripts/apply_v3_phase2.py
+python3 scripts/apply_chat_codes.py   # v2.2: chat con código de entrega (core 0009, shards 0006)
 
 echo "── 3/3 Build y despliegue de Pages ──"
 npm run build
