@@ -53,6 +53,7 @@ import {
   adminSaveTool,
 } from './admin-config';
 import { adminDatabases } from './admin-databases';
+import { adminRanking } from './ranking';
 import { adminSystem } from './admin-system';
 import { confirmToolUse, listMyTools, releaseToolReservation, reserveTool } from './tools-reserve';
 import { courierDeliveries, createDelivery, myDeliveries, verifyDelivery } from './deliveries';
@@ -270,6 +271,7 @@ export async function route(request: Request, env: V2Env, url: URL): Promise<Rou
     if (method === 'PATCH' && path[1] === 'reports' && path.length === 3) {
       return { json: await adminResolveReport(request, env, path[2], body) };
     }
+    if (method === 'GET' && path[1] === 'ranking' && path.length === 2) return { json: await adminRanking(request, env, url) };
     if (method === 'GET' && path[1] === 'system' && path.length === 2) return { json: await adminSystem(request, env) };
     if (method === 'GET' && path[1] === 'databases' && path.length === 2) {
       return { json: await adminDatabases(request, env), headers: { 'Cache-Control': 'no-store' } };
