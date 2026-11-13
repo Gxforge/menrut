@@ -1,6 +1,7 @@
 // MENRUT — Store global de navegación y sesión (Zustand)
 import { create } from 'zustand'
 import { clearChatCache } from '@/lib/chat-cache'
+import { clearQrQueue } from '@/lib/qr-delivery'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ScreenId, SessionUser, SearchFilters, CoverageType } from './types'
 
@@ -91,6 +92,7 @@ export const useAppStore = create<AppState>()(
 
       logout: () => {
         clearChatCache()
+        clearQrQueue()
         set({
           session: null,
           screen: 'home',

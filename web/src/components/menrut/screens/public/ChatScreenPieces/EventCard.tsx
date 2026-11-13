@@ -2,10 +2,12 @@
 'use client'
 
 import { useState } from 'react'
-import { ClipboardCheck, KeyRound, Loader2, PackageCheck } from 'lucide-react'
+import { ClipboardCheck, KeyRound, Loader2, PackageCheck, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { DeliveryCodePayload, EncargoPayload } from '@/lib/types'
+import { buildQrPayload, type CardState, type QrQueueItem } from '@/lib/qr-delivery'
+import { QrImage, QrScanner } from './QrDelivery'
 import type { ChatBubble } from './data'
 
 const STATUS_LABEL: Record<DeliveryCodePayload['status'], string> = {
@@ -20,6 +22,10 @@ export interface EventActions {
   clientConfirm: (deliveryId: string) => void
   cancelCode: (deliveryId: string) => void
   verifyCode: (deliveryId: string, code: string) => void
+  /** Valida el QR con la tarjeta visible; acepta al instante y sincroniza. */
+  scanQr: (text: string, card: CardState, viewerIsCourier: boolean) => void
+  /** Escaneos de esta conversación pendientes o anulados. */
+  queued: QrQueueItem[]
   busy: boolean
 }
 
@@ -33,6 +39,7 @@ export function EventCard({
   actions: EventActions
 }) {
   const [code, setCode] = useState('')
+  const [scanning, setScanning] = useState(false)
 
   if (bubble.kind === 'encargo') {
     const p = bubble.payload as EncargoPayload | null
@@ -69,6 +76,45 @@ export function EventCard({
       )}
 
       <p className="text-[12px] text-muted-foreground">{STATUS_LABEL[status]}</p>
+
+      {showCode && (
+        <div className="space-y-2">
+          <QrImage text={buildQrPayload(p.deliveryId, p.code)} />
+          <p className="text-center text-[12px] text-muted-foreground">
+            {viewerIsCourier ? 'Escanea el QR del cliente para verificar la entrega.' : 'El mensajero o tú podéis escanear este QR.'}
+          </p>
+          {!scanning && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-9 w-full rounded-full text-[13px]"
+              onClick={() => setScanning(true)}
+            >
+              <QrCode className="h-4 w-4" aria-hidden />
+              Escanear QR
+            </Button>
+          )}
+          {scanning && (
+            <QrScanner
+              onResult={(text) => {
+                setScanning(false)
+                actions.scanQr(text, { deliveryId: p.deliveryId, status, expiresAt: p.expiresAt }, viewerIsCourier)
+              }}
+              onClose={() => setScanning(false)}
+            />
+          )}
+        </div>
+      )}
+
+      {actions.queued
+        .filter((q) => q.deliveryId === p.deliveryId)
+        .map((q) =>
+          q.state === 'queued' ? (
+            <p key={q.id} className="text-[12px] text-muted-foreground">Escaneo guardado. Sincronizando…</p>
+          ) : (
+            <p key={q.id} className="text-[12px] font-medium text-destructive">Escaneo anulado: {q.reason}</p>
+          ),
+        )}
 
       {/* Cliente: confirma la recepción o cancela (si no hay encargo ni confirmación). */}
       {!viewerIsCourier && status === 'pending' && (

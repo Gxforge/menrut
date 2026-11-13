@@ -38,7 +38,7 @@ export async function req<T>(path: string, init?: RequestInit & { auth?: boolean
       void import('@/lib/supabase').then((m) => m.endLocalSession())
       throw new Error('Tu sesión caducó. Vuelve a entrar.')
     }
-    throw new Error(body.error || `Error ${res.status}`)
+    throw Object.assign(new Error(body.error || `Error ${res.status}`), { status: res.status })
   }
   return res.json() as Promise<T>
 }

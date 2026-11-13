@@ -28,6 +28,7 @@ import { useChatRoom } from './ChatScreenPieces/useChatRoom'
 import { useChatSend } from './ChatScreenPieces/useChatSend'
 import { useChatHistory } from './ChatScreenPieces/useChatHistory'
 import { useChatActions } from './ChatScreenPieces/useChatActions'
+import { useQrQueue } from './ChatScreenPieces/useQrQueue'
 import { ChatHeader } from './ChatScreenPieces/ChatHeader'
 import { MessageList } from './ChatScreenPieces/MessageList'
 import { Composer } from './ChatScreenPieces/Composer'
@@ -84,6 +85,7 @@ export default function ChatScreen() {
 
   // Acciones de entrega y encargo (código por chat, v2.2)
   const actions = useChatActions(conversationId ?? '', qc)
+  const qrQueue = useQrQueue(conversationId ?? '', qc)
 
   // Datos del otro (rol) para el subtítulo de la barra
   const conversations = useQuery({
@@ -242,6 +244,8 @@ export default function ChatScreen() {
           clientConfirm: (deliveryId) => actions.clientConfirm.mutate(deliveryId),
           cancelCode: (deliveryId) => actions.cancelCode.mutate(deliveryId),
           verifyCode: (deliveryId, code) => actions.verifyCode.mutate({ deliveryId, code }),
+          scanQr: qrQueue.scan,
+          queued: qrQueue.items,
           busy: actions.clientConfirm.isPending || actions.cancelCode.isPending || actions.verifyCode.isPending,
         }}
       />
